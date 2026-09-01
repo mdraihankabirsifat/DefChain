@@ -1,11 +1,20 @@
-import { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
-import type { Organization } from '@defchain/shared';
+import { DatabaseSync } from "node:sqlite";
+import path from "node:path";
+import type { Organization } from "@defchain/shared";
 
-export interface ProtectedRecord {protected_token: string; eligibility_code: string; fields_json: string}
+export interface ProtectedRecord {
+  protected_token: string;
+  eligibility_code: string;
+  fields_json: string;
+}
 
-export function openAgencyDatabase(org: Organization, root = process.cwd()): DatabaseSync {
-  const db = new DatabaseSync(path.join(root, 'data', 'runtime', `${org}.sqlite`));
+export function openAgencyDatabase(
+  org: Organization,
+  root = process.cwd(),
+): DatabaseSync {
+  const db = new DatabaseSync(
+    path.join(root, "data", "runtime", `${org}.sqlite`),
+  );
   db.exec(`
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS protected_records (
