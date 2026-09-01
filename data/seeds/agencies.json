@@ -1,0 +1,14 @@
+{
+  "PoliceMSP": [
+    {"syntheticIdentifier": "TEST-NID-0002", "eligibilityCode": "POLICE_REFERENCE", "fields": {"identityConfirmation": "Synthetic identity independently referenced", "caseReference": "SYN-POL-2026-02", "contactChannel": "Police demo liaison"}}
+  ],
+  "RABMSP": [
+    {"syntheticIdentifier": "TEST-NID-0001", "eligibilityCode": "RELEVANT_RECORD", "fields": {"identityConfirmation": "Synthetic identifier matched provider index", "caseReference": "SYN-RAB-2026-01", "contactChannel": "RAB demo liaison", "eligibilityCategory": "Human verification required"}}
+  ],
+  "BGBMSP": [
+    {"syntheticIdentifier": "TEST-NID-0003", "eligibilityCode": "BORDER_REFERENCE", "fields": {"identityConfirmation": "Synthetic border index reference", "caseReference": "SYN-BGB-2026-03", "contactChannel": "BGB demo liaison"}}
+  ],
+  "CustomsMSP": [
+    {"syntheticIdentifier": "TEST-NID-0004", "eligibilityCode": "CUSTOMS_REFERENCE", "fields": {"identityConfirmation": "Synthetic customs index reference", "caseReference": "SYN-CUS-2026-04", "contactChannel": "Customs demo liaison"}}
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@defchain/agency-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "seed": "tsx src/seed.ts",
+    "dev": "tsx watch src/server.ts",
+    "dev:police": "cross-env ORG_ID=PoliceMSP ADAPTER_PORT=4101 tsx watch src/server.ts",
+    "dev:rab": "cross-env ORG_ID=RABMSP ADAPTER_PORT=4102 tsx watch src/server.ts",
+    "dev:bgb": "cross-env ORG_ID=BGBMSP ADAPTER_PORT=4103 tsx watch src/server.ts",
+    "dev:customs": "cross-env ORG_ID=CustomsMSP ADAPTER_PORT=4104 tsx watch src/server.ts"
+  },
+  "dependencies": {
+    "@defchain/fabric-client": "0.1.0",
+    "@defchain/shared": "0.1.0",
+    "cross-env": "^10.0.0",
+    "dotenv": "^17.2.2",
+    "express": "5.2.1"
+  },
+  "devDependencies": {"@types/express": "^5.0.3", "@types/node": "^24.3.0", "tsx": "^4.20.5", "typescript": "^5.9.2", "vitest": "^3.2.4"}
+}
