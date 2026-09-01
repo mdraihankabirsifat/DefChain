@@ -20,7 +20,14 @@ if ($wslOk) {
   wsl.exe --status
   wsl.exe --list --verbose
   Write-Host "`nUbuntu checks:" -ForegroundColor Cyan
-  wsl.exe -d Ubuntu -- bash -lc 'for c in node npm docker curl jq openssl git; do if command -v "$c" >/dev/null; then echo "[OK] $c -> $(command -v "$c")"; else echo "[MISSING] $c"; fi; done; docker info >/dev/null 2>&1 && echo "[OK] Docker daemon reachable" || echo "[MISSING] Docker daemon is not reachable"'
+  foreach ($linuxCommand in 'node','npm','docker','curl','jq','openssl','git') {
+    $linuxPath = wsl.exe -d Ubuntu -- which $linuxCommand 2>$null
+    if ($LASTEXITCODE -eq 0 -and $linuxPath) { Write-Host "[OK] $linuxCommand -> $linuxPath" -ForegroundColor Green }
+    else { Write-Host "[MISSING] $linuxCommand" -ForegroundColor Red }
+  }
+  wsl.exe -d Ubuntu -- docker info 2>$null | Out-Null
+  if ($LASTEXITCODE -eq 0) { Write-Host '[OK] Docker daemon reachable' -ForegroundColor Green }
+  else { Write-Host '[MISSING] Docker daemon is not reachable' -ForegroundColor Red }
 }
 
 if ($dockerOk) {
