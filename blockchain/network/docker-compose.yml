@@ -1,0 +1,223 @@
+name: defchain
+services:
+  orderer0.defchain.local:
+    image: hyperledger/fabric-orderer:${FABRIC_VERSION:-2.5.12}
+    container_name: orderer0.defchain.local
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:7053
+      - ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
+    working_dir: /root
+    command: orderer
+    volumes:
+      - ./organizations/ordererOrganizations/defchain.local/orderers/orderer0.defchain.local/msp:/var/hyperledger/orderer/msp
+      - ./organizations/ordererOrganizations/defchain.local/orderers/orderer0.defchain.local/tls:/var/hyperledger/orderer/tls
+      - orderer0-data:/var/hyperledger/production/orderer
+    ports: ["7050:7050", "7053:7053"]
+    networks: [defchain]
+  orderer1.defchain.local:
+    profiles: [full]
+    image: hyperledger/fabric-orderer:${FABRIC_VERSION:-2.5.12}
+    container_name: orderer1.defchain.local
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=8050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:8053
+      - ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:10443
+    command: orderer
+    volumes:
+      - ./organizations/ordererOrganizations/defchain.local/orderers/orderer1.defchain.local/msp:/var/hyperledger/orderer/msp
+      - ./organizations/ordererOrganizations/defchain.local/orderers/orderer1.defchain.local/tls:/var/hyperledger/orderer/tls
+      - orderer1-data:/var/hyperledger/production/orderer
+    ports: ["8050:8050", "8053:8053"]
+    networks: [defchain]
+  orderer2.defchain.local:
+    profiles: [full]
+    image: hyperledger/fabric-orderer:${FABRIC_VERSION:-2.5.12}
+    container_name: orderer2.defchain.local
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=9050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:9053
+      - ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:11443
+    command: orderer
+    volumes:
+      - ./organizations/ordererOrganizations/defchain.local/orderers/orderer2.defchain.local/msp:/var/hyperledger/orderer/msp
+      - ./organizations/ordererOrganizations/defchain.local/orderers/orderer2.defchain.local/tls:/var/hyperledger/orderer/tls
+      - orderer2-data:/var/hyperledger/production/orderer
+    ports: ["9050:9050", "9053:9053"]
+    networks: [defchain]
+  peer0.police.defchain.local:
+    image: hyperledger/fabric-peer:${FABRIC_VERSION:-2.5.12}
+    container_name: peer0.police.defchain.local
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./organizations/peerOrganizations/police.defchain.local/peers/peer0.police.defchain.local:/etc/hyperledger/fabric
+      - police-peer-data:/var/hyperledger/production
+    environment:
+      - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.police.defchain.local
+      - CORE_PEER_ADDRESS=peer0.police.defchain.local:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.police.defchain.local:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_LOCALMSPID=PoliceMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.police.defchain.local:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.police.defchain.local:7051
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=defchain_network
+    working_dir: /root
+    command: peer node start
+    ports: ["7051:7051"]
+    networks: [defchain]
+  peer0.rab.defchain.local:
+    image: hyperledger/fabric-peer:${FABRIC_VERSION:-2.5.12}
+    container_name: peer0.rab.defchain.local
+    environment:
+      - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.rab.defchain.local
+      - CORE_PEER_ADDRESS=peer0.rab.defchain.local:8051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.rab.defchain.local:8052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052
+      - CORE_PEER_LOCALMSPID=RABMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.rab.defchain.local:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.rab.defchain.local:8051
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=defchain_network
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./organizations/peerOrganizations/rab.defchain.local/peers/peer0.rab.defchain.local:/etc/hyperledger/fabric
+      - rab-peer-data:/var/hyperledger/production
+    command: peer node start
+    ports: ["8051:8051"]
+    networks: [defchain]
+  peer0.bgb.defchain.local:
+    profiles: [full]
+    image: hyperledger/fabric-peer:${FABRIC_VERSION:-2.5.12}
+    container_name: peer0.bgb.defchain.local
+    environment:
+      - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.bgb.defchain.local
+      - CORE_PEER_ADDRESS=peer0.bgb.defchain.local:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.bgb.defchain.local:9052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_LOCALMSPID=BGBMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.bgb.defchain.local:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.bgb.defchain.local:9051
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=defchain_network
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./organizations/peerOrganizations/bgb.defchain.local/peers/peer0.bgb.defchain.local:/etc/hyperledger/fabric
+      - bgb-peer-data:/var/hyperledger/production
+    command: peer node start
+    ports: ["9051:9051"]
+    networks: [defchain]
+  peer0.customs.defchain.local:
+    profiles: [full]
+    image: hyperledger/fabric-peer:${FABRIC_VERSION:-2.5.12}
+    container_name: peer0.customs.defchain.local
+    environment:
+      - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.customs.defchain.local
+      - CORE_PEER_ADDRESS=peer0.customs.defchain.local:10051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:10051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.customs.defchain.local:10052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:10052
+      - CORE_PEER_LOCALMSPID=CustomsMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.customs.defchain.local:10051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.customs.defchain.local:10051
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=defchain_network
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./organizations/peerOrganizations/customs.defchain.local/peers/peer0.customs.defchain.local:/etc/hyperledger/fabric
+      - customs-peer-data:/var/hyperledger/production
+    command: peer node start
+    ports: ["10051:10051"]
+    networks: [defchain]
+networks:
+  defchain: {name: defchain_network}
+volumes:
+  orderer0-data:
+  orderer1-data:
+  orderer2-data:
+  police-peer-data:
+  rab-peer-data:
+  bgb-peer-data:
+  customs-peer-data:
