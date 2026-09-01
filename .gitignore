@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+.env
+.fabric/
+data/runtime/
+config/runtime/
+blockchain/network/organizations/
+blockchain/network/channel-artifacts/
+blockchain/network/system-genesis-block/
+blockchain/network/logs/
+*.log
+test-results/
+playwright-report/
+.DS_Store
+Thumbs.db
+!.gitkeep

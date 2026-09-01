@@ -1,0 +1,36 @@
+{
+  "name": "defchain",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["apps/*", "services/*", "packages/*", "blockchain/chaincode"],
+  "scripts": {
+    "preflight": "powershell.exe -ExecutionPolicy Bypass -File scripts/windows-preflight.ps1",
+    "setup": "npm install && npm run seed",
+    "bootstrap": "bash scripts/bootstrap.sh full",
+    "bootstrap:lite": "bash scripts/bootstrap.sh lite",
+    "network:up": "bash blockchain/network/network.sh up full",
+    "network:up:lite": "bash blockchain/network/network.sh up lite",
+    "network:down": "bash blockchain/network/network.sh down",
+    "chaincode:deploy": "bash scripts/deploy-chaincode.sh",
+    "seed": "npm run build -w @defchain/shared && npm run seed -w @defchain/agency-adapter",
+    "dev": "concurrently -k -n api,rab,bgb,customs,web -c cyan,magenta,yellow,green,blue \"npm run dev -w @defchain/gateway-api\" \"npm run dev:rab -w @defchain/agency-adapter\" \"npm run dev:bgb -w @defchain/agency-adapter\" \"npm run dev:customs -w @defchain/agency-adapter\" \"npm run dev -w @defchain/web\"",
+    "build": "npm run build -ws --if-present",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "test": "npm run test -ws --if-present",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "test:security": "vitest run tests/security",
+    "demo": "bash scripts/demo.sh",
+    "verify": "npm run build && npm test && bash scripts/verify-ledger-leakage.sh",
+    "benchmark": "bash scripts/benchmark.sh",
+    "reset": "bash scripts/reset.sh",
+    "stop": "bash scripts/stop.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {"node": ">=20 <27", "npm": ">=10"}
+}
