@@ -2,7 +2,12 @@
   "name": "defchain",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["apps/*", "services/*", "packages/*", "blockchain/chaincode"],
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*",
+    "blockchain/chaincode"
+  ],
   "scripts": {
     "preflight": "powershell.exe -ExecutionPolicy Bypass -File scripts/windows-preflight.ps1",
     "setup": "npm install && npm run seed",
@@ -14,9 +19,12 @@
     "chaincode:deploy": "bash scripts/deploy-chaincode.sh",
     "seed": "npm run build -w @defchain/shared && npm run seed -w @defchain/agency-adapter",
     "dev": "concurrently -k -n api,rab,bgb,customs,web -c cyan,magenta,yellow,green,blue \"npm run dev -w @defchain/gateway-api\" \"npm run dev:rab -w @defchain/agency-adapter\" \"npm run dev:bgb -w @defchain/agency-adapter\" \"npm run dev:customs -w @defchain/agency-adapter\" \"npm run dev -w @defchain/web\"",
-    "build": "npm run build -ws --if-present",
-    "typecheck": "npm run typecheck -ws --if-present",
-    "test": "npm run test -ws --if-present",
+    "build": "npm run build -w @defchain/shared && npm run build -w @defchain/fabric-client && npm run build -w @defchain/chaincode && npm run build -w @defchain/agency-adapter && npm run build -w @defchain/gateway-api && npm run build -w @defchain/web",
+    "typecheck": "npm run typecheck -w @defchain/shared && npm run typecheck -w @defchain/fabric-client && npm run typecheck -w @defchain/chaincode && npm run typecheck -w @defchain/agency-adapter && npm run typecheck -w @defchain/gateway-api && npm run typecheck -w @defchain/web",
+    "lint": "eslint apps services packages blockchain tests --ext .ts,.tsx",
+    "format": "prettier --write \"{apps,services,packages,blockchain}/**/*.{ts,tsx,json,yml,yaml,css,html}\" \"*.{json,md,yml,yaml}\" \"docs/**/*.md\" \"scripts/*.mjs\"",
+    "format:check": "prettier --check \"{apps,services,packages,blockchain}/**/*.{ts,tsx,json,yml,yaml,css,html}\" \"*.{json,md,yml,yaml}\" \"docs/**/*.md\" \"scripts/*.mjs\"",
+    "test": "npm run test -w @defchain/shared && npm run test -w @defchain/chaincode && npm run test -w @defchain/agency-adapter && npm run test -w @defchain/gateway-api && npm run test -w @defchain/web",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
     "test:security": "vitest run tests/security",
@@ -27,10 +35,18 @@
     "stop": "bash scripts/stop.sh"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.55.0",
     "concurrently": "^9.2.1",
+    "eslint": "^10.9.1",
+    "globals": "^17.11.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.9.2",
+    "typescript-eslint": "^8.69.0",
     "vitest": "^3.2.4"
   },
-  "engines": {"node": ">=20 <27", "npm": ">=10"}
+  "engines": {
+    "node": ">=20 <27",
+    "npm": ">=10"
+  }
 }

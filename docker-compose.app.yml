@@ -1,0 +1,72 @@
+name: defchain-app
+services:
+  gateway-api:
+    build: { context: ., dockerfile: services/gateway-api/Dockerfile }
+    env_file: .env
+    environment:
+      - BIND_HOST=0.0.0.0
+      - POLICE_PEER_ENDPOINT=peer0.police.defchain.local:7051
+      - RAB_PEER_ENDPOINT=peer0.rab.defchain.local:8051
+      - BGB_PEER_ENDPOINT=peer0.bgb.defchain.local:9051
+      - CUSTOMS_PEER_ENDPOINT=peer0.customs.defchain.local:10051
+      - RAB_ADAPTER_URL=http://rab-adapter:4102
+      - BGB_ADAPTER_URL=http://bgb-adapter:4103
+      - CUSTOMS_ADAPTER_URL=http://customs-adapter:4104
+    ports: ["4000:4000"]
+    volumes:
+      - ./data/runtime:/app/data/runtime
+      - ./config/runtime:/app/config/runtime:ro
+      - ./blockchain/network/organizations:/app/blockchain/network/organizations:ro
+    networks: [app, defchain]
+  rab-adapter:
+    build: { context: ., dockerfile: services/agency-adapter/Dockerfile }
+    env_file: .env
+    environment:
+      [
+        ORG_ID=RABMSP,
+        ADAPTER_PORT=4102,
+        BIND_HOST=0.0.0.0,
+        RAB_PEER_ENDPOINT=peer0.rab.defchain.local:8051,
+      ]
+    volumes:
+      - ./data/runtime:/app/data/runtime
+      - ./config/runtime:/app/config/runtime:ro
+      - ./blockchain/network/organizations:/app/blockchain/network/organizations:ro
+    networks: [app, defchain]
+  bgb-adapter:
+    build: { context: ., dockerfile: services/agency-adapter/Dockerfile }
+    env_file: .env
+    environment:
+      [
+        ORG_ID=BGBMSP,
+        ADAPTER_PORT=4103,
+        BIND_HOST=0.0.0.0,
+        BGB_PEER_ENDPOINT=peer0.bgb.defchain.local:9051,
+      ]
+    volumes:
+      - ./data/runtime:/app/data/runtime
+      - ./config/runtime:/app/config/runtime:ro
+      - ./blockchain/network/organizations:/app/blockchain/network/organizations:ro
+    networks: [app, defchain]
+  customs-adapter:
+    build: { context: ., dockerfile: services/agency-adapter/Dockerfile }
+    env_file: .env
+    environment:
+      [
+        ORG_ID=CustomsMSP,
+        ADAPTER_PORT=4104,
+        BIND_HOST=0.0.0.0,
+        CUSTOMS_PEER_ENDPOINT=peer0.customs.defchain.local:10051,
+      ]
+    volumes:
+      - ./data/runtime:/app/data/runtime
+      - ./config/runtime:/app/config/runtime:ro
+      - ./blockchain/network/organizations:/app/blockchain/network/organizations:ro
+    networks: [app, defchain]
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    ports: ["5173:80"]
+    networks: [app]
+networks:
+  app: { internal: true }
+  defchain: { external: true, name: defchain_network }

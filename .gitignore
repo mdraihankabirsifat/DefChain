@@ -4,12 +4,14 @@ coverage/
 .env
 .fabric/
 data/runtime/
+**/data/runtime/
 config/runtime/
 blockchain/network/organizations/
 blockchain/network/channel-artifacts/
 blockchain/network/system-genesis-block/
 blockchain/network/logs/
 *.log
+*.tsbuildinfo
 test-results/
 playwright-report/
 .DS_Store

@@ -33,3 +33,50 @@ The current machine is missing Docker and a native Node installation inside WSL.
 - `docs` — architecture, governance, threat model, API, tests, demo, and judging evidence.
 
 Full startup, demo accounts, verified topology, test commands, limitations, and troubleshooting are documented in [docs/QUICKSTART.md](docs/QUICKSTART.md). Current implementation truth and blockers are in [PROGRESS.md](PROGRESS.md).
+
+## Demo accounts
+
+| Actor                 | Username              | Password           | Organization / role      |
+| --------------------- | --------------------- | ------------------ | ------------------------ |
+| Police investigator   | `police.investigator` | `PoliceDemo!2026`  | PoliceMSP / investigator |
+| RAB officer           | `rab.officer`         | `RabDemo!2026`     | RABMSP / provider        |
+| BGB officer           | `bgb.officer`         | `BgbDemo!2026`     | BGBMSP / provider        |
+| Customs officer       | `customs.officer`     | `CustomsDemo!2026` | CustomsMSP / provider    |
+| Independent auditor   | `auditor`             | `AuditDemo!2026`   | read-only auditor        |
+| Revoked test user     | `revoked.user`        | `RevokedDemo!2026` | disabled                 |
+| Exhausted-budget user | `budget.exhausted`    | `BudgetDemo!2026`  | zero query budget        |
+
+These credentials are local demonstration fixtures, not production defaults.
+
+## Guided path
+
+1. Log in as Police and query `TEST-NID-0001` under active case `P-2026-014` and purpose `ACTIVE_INVESTIGATION`.
+2. Observe RAB `MATCH` and BGB/Customs `NO_MATCH` attestations with real Fabric transaction IDs.
+3. Request `IDENTITY_CONFIRMATION` and `CASE_REFERENCE` from RAB.
+4. Switch to the RAB officer and APPROVE or PARTIAL the request. Use a second request to demonstrate DENY.
+5. Switch back to Police, execute disclosure, and verify AES-GCM integrity, Ed25519 signature, payload hash, and receipt transaction ID.
+6. Open Audit timeline and query the workflow. Then demonstrate missing case, budget exhaustion, and revoked-user rejection.
+
+## On-chain boundary
+
+| Common Fabric ledger                                                                                                                                                 | Kept off-chain                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Opaque case reference, purpose, organizations, requested/approved scopes, MATCH/NO_MATCH, decision/reason codes, payload hash/signature, timestamps, transaction IDs | Raw identifier, HMAC token/key, provider record, justification text, encrypted/plain payload, passwords/JWTs, encryption/private keys |
+
+## Topology and commands
+
+- Lite target: PoliceMSP peer, RABMSP peer, one real etcdraft/Raft orderer.
+- Full target: PoliceMSP, RABMSP, BGBMSP, and CustomsMSP peers plus three etcdraft/Raft orderers.
+- Channel: `defchain-channel`; chaincode: `defchain`.
+- The topology is checked in but has not been runtime-verified on this machine because Docker is absent. No transaction ID is claimed.
+
+```bash
+npm run build
+npm test
+npm run test:security
+RUN_REAL_FABRIC_TESTS=true npm run test:integration
+npm run verify
+npm run reset
+```
+
+See [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) for results actually observed and [docs/LIMITATIONS.md](docs/LIMITATIONS.md) for residual risks.

@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+.fabric
+data/runtime
+config/runtime
+blockchain/network/organizations
+blockchain/network/channel-artifacts
+package-lock.json
