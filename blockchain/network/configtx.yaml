@@ -4,81 +4,100 @@ Organizations:
     ID: OrdererMSP
     MSPDir: organizations/ordererOrganizations/defchain.local/msp
     Policies:
-      Readers: {Type: Signature, Rule: "OR('OrdererMSP.member')"}
-      Writers: {Type: Signature, Rule: "OR('OrdererMSP.member')"}
-      Admins: {Type: Signature, Rule: "OR('OrdererMSP.admin')"}
+      Readers: { Type: Signature, Rule: "OR('OrdererMSP.member')" }
+      Writers: { Type: Signature, Rule: "OR('OrdererMSP.member')" }
+      Admins: { Type: Signature, Rule: "OR('OrdererMSP.admin')" }
   - &Police
     Name: PoliceMSP
     ID: PoliceMSP
     MSPDir: organizations/peerOrganizations/police.defchain.local/msp
     Policies:
-      Readers: {Type: Signature, Rule: "OR('PoliceMSP.admin', 'PoliceMSP.peer', 'PoliceMSP.client')"}
-      Writers: {Type: Signature, Rule: "OR('PoliceMSP.admin', 'PoliceMSP.client')"}
-      Admins: {Type: Signature, Rule: "OR('PoliceMSP.admin')"}
-      Endorsement: {Type: Signature, Rule: "OR('PoliceMSP.peer')"}
-    AnchorPeers: [{Host: peer0.police.defchain.local, Port: 7051}]
+      Readers:
+        {
+          Type: Signature,
+          Rule: "OR('PoliceMSP.admin', 'PoliceMSP.peer', 'PoliceMSP.client')",
+        }
+      Writers:
+        { Type: Signature, Rule: "OR('PoliceMSP.admin', 'PoliceMSP.client')" }
+      Admins: { Type: Signature, Rule: "OR('PoliceMSP.admin')" }
+      Endorsement: { Type: Signature, Rule: "OR('PoliceMSP.peer')" }
+    AnchorPeers: [{ Host: peer0.police.defchain.local, Port: 7051 }]
   - &RAB
     Name: RABMSP
     ID: RABMSP
     MSPDir: organizations/peerOrganizations/rab.defchain.local/msp
     Policies:
-      Readers: {Type: Signature, Rule: "OR('RABMSP.admin', 'RABMSP.peer', 'RABMSP.client')"}
-      Writers: {Type: Signature, Rule: "OR('RABMSP.admin', 'RABMSP.client')"}
-      Admins: {Type: Signature, Rule: "OR('RABMSP.admin')"}
-      Endorsement: {Type: Signature, Rule: "OR('RABMSP.peer')"}
-    AnchorPeers: [{Host: peer0.rab.defchain.local, Port: 8051}]
+      Readers:
+        {
+          Type: Signature,
+          Rule: "OR('RABMSP.admin', 'RABMSP.peer', 'RABMSP.client')",
+        }
+      Writers: { Type: Signature, Rule: "OR('RABMSP.admin', 'RABMSP.client')" }
+      Admins: { Type: Signature, Rule: "OR('RABMSP.admin')" }
+      Endorsement: { Type: Signature, Rule: "OR('RABMSP.peer')" }
+    AnchorPeers: [{ Host: peer0.rab.defchain.local, Port: 8051 }]
   - &BGB
     Name: BGBMSP
     ID: BGBMSP
     MSPDir: organizations/peerOrganizations/bgb.defchain.local/msp
     Policies:
-      Readers: {Type: Signature, Rule: "OR('BGBMSP.admin', 'BGBMSP.peer', 'BGBMSP.client')"}
-      Writers: {Type: Signature, Rule: "OR('BGBMSP.admin', 'BGBMSP.client')"}
-      Admins: {Type: Signature, Rule: "OR('BGBMSP.admin')"}
-      Endorsement: {Type: Signature, Rule: "OR('BGBMSP.peer')"}
-    AnchorPeers: [{Host: peer0.bgb.defchain.local, Port: 9051}]
+      Readers:
+        {
+          Type: Signature,
+          Rule: "OR('BGBMSP.admin', 'BGBMSP.peer', 'BGBMSP.client')",
+        }
+      Writers: { Type: Signature, Rule: "OR('BGBMSP.admin', 'BGBMSP.client')" }
+      Admins: { Type: Signature, Rule: "OR('BGBMSP.admin')" }
+      Endorsement: { Type: Signature, Rule: "OR('BGBMSP.peer')" }
+    AnchorPeers: [{ Host: peer0.bgb.defchain.local, Port: 9051 }]
   - &Customs
     Name: CustomsMSP
     ID: CustomsMSP
     MSPDir: organizations/peerOrganizations/customs.defchain.local/msp
     Policies:
-      Readers: {Type: Signature, Rule: "OR('CustomsMSP.admin', 'CustomsMSP.peer', 'CustomsMSP.client')"}
-      Writers: {Type: Signature, Rule: "OR('CustomsMSP.admin', 'CustomsMSP.client')"}
-      Admins: {Type: Signature, Rule: "OR('CustomsMSP.admin')"}
-      Endorsement: {Type: Signature, Rule: "OR('CustomsMSP.peer')"}
-    AnchorPeers: [{Host: peer0.customs.defchain.local, Port: 10051}]
+      Readers:
+        {
+          Type: Signature,
+          Rule: "OR('CustomsMSP.admin', 'CustomsMSP.peer', 'CustomsMSP.client')",
+        }
+      Writers:
+        { Type: Signature, Rule: "OR('CustomsMSP.admin', 'CustomsMSP.client')" }
+      Admins: { Type: Signature, Rule: "OR('CustomsMSP.admin')" }
+      Endorsement: { Type: Signature, Rule: "OR('CustomsMSP.peer')" }
+    AnchorPeers: [{ Host: peer0.customs.defchain.local, Port: 10051 }]
 
 Capabilities:
-  Channel: &ChannelCapabilities {V2_0: true}
-  Orderer: &OrdererCapabilities {V2_0: true}
-  Application: &ApplicationCapabilities {V2_5: true}
+  Channel: &ChannelCapabilities { V2_0: true }
+  Orderer: &OrdererCapabilities { V2_0: true }
+  Application: &ApplicationCapabilities { V2_5: true }
 
 Application: &ApplicationDefaults
   Organizations:
   Policies:
-    Readers: {Type: ImplicitMeta, Rule: "ANY Readers"}
-    Writers: {Type: ImplicitMeta, Rule: "ANY Writers"}
-    Admins: {Type: ImplicitMeta, Rule: "MAJORITY Admins"}
-    LifecycleEndorsement: {Type: ImplicitMeta, Rule: "MAJORITY Endorsement"}
-    Endorsement: {Type: ImplicitMeta, Rule: "ANY Endorsement"}
+    Readers: { Type: ImplicitMeta, Rule: "ANY Readers" }
+    Writers: { Type: ImplicitMeta, Rule: "ANY Writers" }
+    Admins: { Type: ImplicitMeta, Rule: "MAJORITY Admins" }
+    LifecycleEndorsement: { Type: ImplicitMeta, Rule: "MAJORITY Endorsement" }
+    Endorsement: { Type: ImplicitMeta, Rule: "ANY Endorsement" }
   Capabilities: *ApplicationCapabilities
 
 Orderer: &OrdererDefaults
   OrdererType: etcdraft
   BatchTimeout: 1s
-  BatchSize: {MaxMessageCount: 50, AbsoluteMaxBytes: 10 MB, PreferredMaxBytes: 2 MB}
+  BatchSize:
+    { MaxMessageCount: 50, AbsoluteMaxBytes: 10 MB, PreferredMaxBytes: 2 MB }
   Organizations:
   Policies:
-    Readers: {Type: ImplicitMeta, Rule: "ANY Readers"}
-    Writers: {Type: ImplicitMeta, Rule: "ANY Writers"}
-    Admins: {Type: ImplicitMeta, Rule: "MAJORITY Admins"}
-    BlockValidation: {Type: ImplicitMeta, Rule: "ANY Writers"}
+    Readers: { Type: ImplicitMeta, Rule: "ANY Readers" }
+    Writers: { Type: ImplicitMeta, Rule: "ANY Writers" }
+    Admins: { Type: ImplicitMeta, Rule: "MAJORITY Admins" }
+    BlockValidation: { Type: ImplicitMeta, Rule: "ANY Writers" }
 
 Channel: &ChannelDefaults
   Policies:
-    Readers: {Type: ImplicitMeta, Rule: "ANY Readers"}
-    Writers: {Type: ImplicitMeta, Rule: "ANY Writers"}
-    Admins: {Type: ImplicitMeta, Rule: "MAJORITY Admins"}
+    Readers: { Type: ImplicitMeta, Rule: "ANY Readers" }
+    Writers: { Type: ImplicitMeta, Rule: "ANY Writers" }
+    Admins: { Type: ImplicitMeta, Rule: "MAJORITY Admins" }
   Capabilities: *ChannelCapabilities
 
 Profiles:

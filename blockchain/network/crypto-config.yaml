@@ -13,20 +13,20 @@ PeerOrgs:
   - Name: Police
     Domain: police.defchain.local
     EnableNodeOUs: true
-    Template: {Count: 1, SANS: [localhost]}
-    Users: {Count: 1}
+    Template: { Count: 1, SANS: [localhost] }
+    Users: { Count: 1 }
   - Name: RAB
     Domain: rab.defchain.local
     EnableNodeOUs: true
-    Template: {Count: 1, SANS: [localhost]}
-    Users: {Count: 1}
+    Template: { Count: 1, SANS: [localhost] }
+    Users: { Count: 1 }
   - Name: BGB
     Domain: bgb.defchain.local
     EnableNodeOUs: true
-    Template: {Count: 1, SANS: [localhost]}
-    Users: {Count: 1}
+    Template: { Count: 1, SANS: [localhost] }
+    Users: { Count: 1 }
   - Name: Customs
     Domain: customs.defchain.local
     EnableNodeOUs: true
-    Template: {Count: 1, SANS: [localhost]}
-    Users: {Count: 1}
+    Template: { Count: 1, SANS: [localhost] }
+    Users: { Count: 1 }

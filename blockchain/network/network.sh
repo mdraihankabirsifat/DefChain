@@ -38,13 +38,13 @@ join_orderer() {
   local name="$1" admin_port="$2"
   local tls="$NETWORK_DIR/organizations/ordererOrganizations/defchain.local/orderers/$name.defchain.local/tls"
   if osnadmin channel list -o "localhost:$admin_port" --ca-file "$tls/ca.crt" --client-cert "$tls/server.crt" --client-key "$tls/server.key" 2>/dev/null | grep -q "$CHANNEL"; then return; fi
-  osnadmin channel join --channelID "$CHANNEL" --config-block "$NETWORK_DIR/channel-artifacts/$CHANNEL.block" -o "localhost:$admin_port" --ca-file "$tls/ca.crt" --client-cert "$tls/server.crt" --client-key "$tls/server.key"
+  osnadmin channel join --channelID "$CHANNEL" --config-block "$CHANNEL_BLOCK" -o "localhost:$admin_port" --ca-file "$tls/ca.crt" --client-cert "$tls/server.crt" --client-key "$tls/server.key"
 }
 
 join_peer() {
   set_peer "$1"
   if peer channel list 2>/dev/null | grep -q "$CHANNEL"; then return; fi
-  peer channel join -b "$NETWORK_DIR/channel-artifacts/$CHANNEL.block"
+  peer channel join -b "$CHANNEL_BLOCK"
 }
 
 if [ "$ACTION" = down ]; then
@@ -68,8 +68,9 @@ if [ ! -d "$NETWORK_DIR/organizations/peerOrganizations" ]; then
 fi
 profile=DefChainLite
 [ "$MODE" = full ] && profile=DefChainFull
-if [ ! -f "$NETWORK_DIR/channel-artifacts/$CHANNEL.block" ]; then
-  (cd "$NETWORK_DIR" && FABRIC_CFG_PATH="$NETWORK_DIR" configtxgen -profile "$profile" -outputBlock "channel-artifacts/$CHANNEL.block" -channelID "$CHANNEL")
+CHANNEL_BLOCK="$NETWORK_DIR/channel-artifacts/$CHANNEL-$MODE.block"
+if [ ! -f "$CHANNEL_BLOCK" ]; then
+  (cd "$NETWORK_DIR" && FABRIC_CFG_PATH="$NETWORK_DIR" configtxgen -profile "$profile" -outputBlock "channel-artifacts/$CHANNEL-$MODE.block" -channelID "$CHANNEL")
 fi
 compose up -d
 wait_port localhost 7053 orderer0

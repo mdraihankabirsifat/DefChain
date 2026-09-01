@@ -212,7 +212,7 @@ services:
     ports: ["10051:10051"]
     networks: [defchain]
 networks:
-  defchain: {name: defchain_network}
+  defchain: { name: defchain_network }
 volumes:
   orderer0-data:
   orderer1-data:
