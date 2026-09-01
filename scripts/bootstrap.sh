@@ -19,11 +19,12 @@ done
 mkdir -p .fabric/bin .fabric/config config/runtime data/runtime
 if [ ! -x .fabric/bin/peer ]; then
   FABRIC_VERSION="${FABRIC_VERSION:-2.5.12}"
-  CA_VERSION="${FABRIC_CA_VERSION:-1.5.15}"
   echo "Downloading official Hyperledger Fabric $FABRIC_VERSION tooling locally..."
-  curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh
-  bash install-fabric.sh --fabric-version "$FABRIC_VERSION" --ca-version "$CA_VERSION" binary docker
-  rm -f install-fabric.sh
+  archive="/tmp/hyperledger-fabric-${FABRIC_VERSION}.tar.gz"
+  curl -fL "https://github.com/hyperledger/fabric/releases/download/v${FABRIC_VERSION}/hyperledger-fabric-linux-amd64-${FABRIC_VERSION}.tar.gz" -o "$archive"
+  tar -xzf "$archive" -C .fabric
+  rm -f "$archive"
+  for image in peer orderer tools ccenv nodeenv baseos; do docker pull "hyperledger/fabric-${image}:${FABRIC_VERSION}"; done
 fi
 
 npm install
