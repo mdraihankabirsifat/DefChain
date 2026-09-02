@@ -29,7 +29,15 @@ export const queryInputSchema = z
     policyVersion: z.string().min(1).max(24),
     createdByRole: z.literal("INVESTIGATOR"),
   })
-  .strict();
+  .strict()
+  .refine(
+    (value) =>
+      new Set(value.targetOrganizations).size ===
+      value.targetOrganizations.length,
+    {
+      message: "Target organizations must be unique",
+    },
+  );
 
 export const matchInputSchema = z
   .object({
@@ -53,6 +61,13 @@ export const accessInputSchema = z
     justificationHash: hash,
   })
   .strict()
+  .refine(
+    (value) =>
+      new Set(value.requestedScopes).size === value.requestedScopes.length,
+    {
+      message: "Requested scopes must be unique",
+    },
+  )
   .refine((value) => value.requesterOrg !== value.providerOrg, {
     message: "Provider must differ from requester",
   });
@@ -70,6 +85,11 @@ export const decisionInputSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (new Set(value.approvedScopes).size !== value.approvedScopes.length)
+      ctx.addIssue({
+        code: "custom",
+        message: "Approved scopes must be unique",
+      });
     if (value.decision === "DENY" && value.approvedScopes.length)
       ctx.addIssue({ code: "custom", message: "DENY cannot include scopes" });
     if (value.decision !== "DENY" && !value.approvedScopes.length)
@@ -95,7 +115,15 @@ export const apiQuerySchema = z
     syntheticIdentifier: z.string().regex(/^TEST-NID-[0-9]{4}$/),
     targetOrganizations: z.array(organizationSchema).min(1).max(4),
   })
-  .strict();
+  .strict()
+  .refine(
+    (value) =>
+      new Set(value.targetOrganizations).size ===
+      value.targetOrganizations.length,
+    {
+      message: "Target organizations must be unique",
+    },
+  );
 
 export const apiAccessSchema = z
   .object({
@@ -104,7 +132,14 @@ export const apiAccessSchema = z
     requestedScopes: z.array(scopeSchema).min(1).max(4),
     justification: z.string().min(12).max(500),
   })
-  .strict();
+  .strict()
+  .refine(
+    (value) =>
+      new Set(value.requestedScopes).size === value.requestedScopes.length,
+    {
+      message: "Requested scopes must be unique",
+    },
+  );
 
 export const apiDecisionSchema = z
   .object({
@@ -112,4 +147,41 @@ export const apiDecisionSchema = z
     approvedScopes: z.array(scopeSchema).max(4),
     reasonCode: z.string().min(2).max(48),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (new Set(value.approvedScopes).size !== value.approvedScopes.length)
+      ctx.addIssue({
+        code: "custom",
+        message: "Approved scopes must be unique",
+      });
+    if (value.decision === "DENY" && value.approvedScopes.length)
+      ctx.addIssue({ code: "custom", message: "DENY cannot include scopes" });
+    if (value.decision !== "DENY" && !value.approvedScopes.length)
+      ctx.addIssue({ code: "custom", message: "Approval requires scopes" });
+  });
+
+export function validateDecisionScopes(
+  decision: "APPROVE" | "PARTIAL" | "DENY",
+  approvedScopes: readonly string[],
+  requestedScopes: readonly string[],
+): void {
+  const approved = new Set(approvedScopes);
+  const requested = new Set(requestedScopes);
+  if (approved.size !== approvedScopes.length)
+    throw new Error("DUPLICATE_APPROVED_SCOPE");
+  if ([...approved].some((scopeValue) => !requested.has(scopeValue)))
+    throw new Error("UNREQUESTED_APPROVED_SCOPE");
+  if (decision === "DENY" && approved.size !== 0)
+    throw new Error("DENY_MUST_APPROVE_NO_SCOPES");
+  if (
+    decision === "APPROVE" &&
+    (approved.size !== requested.size ||
+      [...requested].some((scopeValue) => !approved.has(scopeValue)))
+  )
+    throw new Error("APPROVE_MUST_GRANT_EXACT_REQUESTED_SCOPES");
+  if (
+    decision === "PARTIAL" &&
+    (approved.size === 0 || approved.size >= requested.size)
+  )
+    throw new Error("PARTIAL_MUST_GRANT_NONEMPTY_PROPER_SUBSET");
+}

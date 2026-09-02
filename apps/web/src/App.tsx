@@ -33,6 +33,12 @@ type LedgerRecord = Record<string, unknown> & {
   providerOrg?: string;
   result?: string;
   decision?: string;
+  requestedScopes?: string[];
+};
+type DemoConfig = {
+  mode: "lite" | "full";
+  modeLabel: string;
+  providers: string[];
 };
 const actors = [
   {
@@ -96,8 +102,16 @@ export function App() {
   }>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [config, setConfig] = useState<DemoConfig>({
+    mode: "lite",
+    modeLabel: "Lite Demo",
+    providers: ["RABMSP"],
+  });
 
   useEffect(() => {
+    request<DemoConfig>("/config")
+      .then(setConfig)
+      .catch(() => undefined);
     request<{ user: DemoUser }>("/auth/me")
       .then((r) => setUser(r.user))
       .catch(() => localStorage.removeItem("defchain_token"));
@@ -129,7 +143,8 @@ export function App() {
     setUser(null);
     setView("dashboard");
   }
-  if (!user) return <Login onLogin={signIn} busy={busy} error={error} />;
+  if (!user)
+    return <Login onLogin={signIn} busy={busy} error={error} config={config} />;
 
   const nav = [
     { id: "dashboard", label: "Overview", icon: Activity },
@@ -174,9 +189,7 @@ export function App() {
       <main>
         <header>
           <div>
-            <span className="eyebrow">
-              Synthetic data · Competition prototype
-            </span>
+            <span className="eyebrow">Synthetic data · {config.modeLabel}</span>
             <h1>{nav.find((n) => n.id === view)?.label}</h1>
           </div>
           <HealthBadge available={health?.blockchain?.available} />
@@ -184,7 +197,7 @@ export function App() {
         {view === "dashboard" && (
           <Dashboard user={user} available={health?.blockchain?.available} />
         )}
-        {view === "discovery" && <Discovery />}
+        {view === "discovery" && <Discovery config={config} />}
         {view === "disclosure" && <Disclosure />}
         {view === "inbox" && <ProviderInbox />}
         {view === "audit" && <Audit />}
@@ -228,18 +241,24 @@ function Login({
   onLogin,
   busy,
   error,
+  config,
 }: {
   onLogin: (u: string, p: string) => void;
   busy: boolean;
   error: string;
+  config: DemoConfig;
 }) {
+  const availableActors = actors.filter(
+    (actor) =>
+      actor.role !== "Provider" || config.providers.includes(actor.org),
+  );
   return (
     <div className="login-page">
       <div className="login-glow" />
       <section className="login-intro">
         <Brand />
         <span className="prototype">
-          Synthetic Data / Competition Prototype
+          Synthetic Data / Competition Prototype · {config.modeLabel}
         </span>
         <h1>
           Sovereign coordination,
@@ -268,7 +287,7 @@ function Login({
           </p>
         </div>
         <div className="actor-grid">
-          {actors.map((actor) => (
+          {availableActors.map((actor) => (
             <button
               disabled={busy}
               key={actor.username}
@@ -413,12 +432,18 @@ function Metric({
   );
 }
 
-function Discovery() {
+function Discovery({ config }: { config: DemoConfig }) {
   const [cases, setCases] = useState<Array<{ case_id: string }>>([]);
   const [result, setResult] = useState<{
     query: LedgerRecord;
     attestations: LedgerRecord[];
     notice: string;
+    partial: boolean;
+    providerResults: Array<{
+      providerOrg: string;
+      status: "ATTESTED" | "FAILED";
+      attestation?: LedgerRecord;
+    }>;
   }>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -437,13 +462,19 @@ function Discovery() {
         query: LedgerRecord;
         attestations: LedgerRecord[];
         notice: string;
+        partial: boolean;
+        providerResults: Array<{
+          providerOrg: string;
+          status: "ATTESTED" | "FAILED";
+          attestation?: LedgerRecord;
+        }>;
       }>("/queries", {
         method: "POST",
         body: JSON.stringify({
           caseId: form.get("caseId"),
           purposeCode: "ACTIVE_INVESTIGATION",
           syntheticIdentifier: form.get("identifier"),
-          targetOrganizations: ["RABMSP", "BGBMSP", "CustomsMSP"],
+          targetOrganizations: config.providers,
         }),
       });
       setResult(response);
@@ -490,10 +521,10 @@ function Discovery() {
           </label>
           <fieldset>
             <legend>Target organizations</legend>
-            {["RAB", "BGB", "Customs"].map((o) => (
-              <label className="check" key={o}>
+            {config.providers.map((provider) => (
+              <label className="check" key={provider}>
                 <input type="checkbox" checked readOnly />
-                {o}
+                {provider.replace("MSP", "")}
               </label>
             ))}
           </fieldset>
@@ -520,18 +551,32 @@ function Discovery() {
               <span>QueryRequest committed</span>
               <CopyButton value={result.query.txId} />
             </div>
-            {result.attestations.map((a) => (
-              <div className="attestation" key={a.txId}>
-                <div
-                  className={`result-dot ${a.result === "MATCH" ? "match" : ""}`}
-                />
-                <div>
-                  <strong>{String(a.providerOrg).replace("MSP", "")}</strong>
-                  <span>{a.result}</span>
+            {result.partial && (
+              <p className="partial-warning">
+                The QueryRequest is committed, but a provider attestation
+                failed. Retry that provider against this query; do not create a
+                duplicate query.
+              </p>
+            )}
+            {result.providerResults.map((providerResult) => {
+              const a = providerResult.attestation;
+              return (
+                <div className="attestation" key={providerResult.providerOrg}>
+                  <div
+                    className={`result-dot ${a?.result === "MATCH" ? "match" : providerResult.status === "FAILED" ? "failed" : ""}`}
+                  />
+                  <div>
+                    <strong>
+                      {providerResult.providerOrg.replace("MSP", "")}
+                    </strong>
+                    <span>
+                      {a?.result ?? "ATTESTATION FAILED · SAFE TO RETRY"}
+                    </span>
+                  </div>
+                  {a && <CopyButton value={a.txId} />}
                 </div>
-                <CopyButton value={a.txId} />
-              </div>
-            ))}
+              );
+            })}
             <p className="notice">{result.notice}</p>
           </>
         )}
@@ -672,8 +717,8 @@ function ProviderInbox() {
             decision === "DENY"
               ? []
               : decision === "PARTIAL"
-                ? ["IDENTITY_CONFIRMATION"]
-                : ["IDENTITY_CONFIRMATION", "CASE_REFERENCE"],
+                ? (item.requestedScopes ?? []).slice(0, 1)
+                : (item.requestedScopes ?? []),
           reasonCode:
             decision === "DENY" ? "SCOPE_NOT_JUSTIFIED" : "POLICY_CHECK_PASSED",
         }),

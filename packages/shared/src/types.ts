@@ -6,6 +6,25 @@ export const ORGANIZATIONS = [
 ] as const;
 export type Organization = (typeof ORGANIZATIONS)[number];
 
+export const FABRIC_NETWORK_MODES = ["lite", "full"] as const;
+export type FabricNetworkMode = (typeof FABRIC_NETWORK_MODES)[number];
+
+export const PROVIDERS_BY_MODE: Record<
+  FabricNetworkMode,
+  readonly Organization[]
+> = {
+  lite: ["RABMSP"],
+  full: ["RABMSP", "BGBMSP", "CustomsMSP"],
+};
+
+export function parseFabricNetworkMode(value?: string): FabricNetworkMode {
+  return value === "full" ? "full" : "lite";
+}
+
+export function modeLabel(mode: FabricNetworkMode): string {
+  return mode === "full" ? "Full Demo" : "Lite Demo";
+}
+
 export const LEDGER_RECORD_TYPES = [
   "QueryRequest",
   "MatchAttestation",

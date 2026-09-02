@@ -18,7 +18,9 @@
     "network:down": "bash blockchain/network/network.sh down",
     "chaincode:deploy": "bash scripts/deploy-chaincode.sh",
     "seed": "npm run build -w @defchain/shared && npm run seed -w @defchain/agency-adapter",
-    "dev": "concurrently -k -n api,rab,bgb,customs,web -c cyan,magenta,yellow,green,blue \"npm run dev -w @defchain/gateway-api\" \"npm run dev:rab -w @defchain/agency-adapter\" \"npm run dev:bgb -w @defchain/agency-adapter\" \"npm run dev:customs -w @defchain/agency-adapter\" \"npm run dev -w @defchain/web\"",
+    "dev": "npm run dev:lite",
+    "dev:lite": "cross-env FABRIC_NETWORK_MODE=lite concurrently -k -n api,rab,web -c cyan,magenta,blue \"npm run dev -w @defchain/gateway-api\" \"npm run dev:rab -w @defchain/agency-adapter\" \"npm run dev -w @defchain/web\"",
+    "dev:full": "cross-env FABRIC_NETWORK_MODE=full concurrently -k -n api,rab,bgb,customs,web -c cyan,magenta,yellow,green,blue \"npm run dev -w @defchain/gateway-api\" \"npm run dev:rab -w @defchain/agency-adapter\" \"npm run dev:bgb -w @defchain/agency-adapter\" \"npm run dev:customs -w @defchain/agency-adapter\" \"npm run dev -w @defchain/web\"",
     "build": "npm run build -w @defchain/shared && npm run build -w @defchain/fabric-client && npm run build -w @defchain/chaincode && npm run build -w @defchain/agency-adapter && npm run build -w @defchain/gateway-api && npm run build -w @defchain/web",
     "typecheck": "npm run typecheck -w @defchain/shared && npm run typecheck -w @defchain/fabric-client && npm run typecheck -w @defchain/chaincode && npm run typecheck -w @defchain/agency-adapter && npm run typecheck -w @defchain/gateway-api && npm run typecheck -w @defchain/web",
     "lint": "eslint apps services packages blockchain tests --ext .ts,.tsx",
@@ -31,6 +33,7 @@
     "demo": "bash scripts/demo.sh",
     "verify": "npm run build && npm test && bash scripts/verify-ledger-leakage.sh",
     "benchmark": "bash scripts/benchmark.sh",
+    "verify:production": "bash scripts/verify-production-routing.sh",
     "reset": "bash scripts/reset.sh",
     "stop": "bash scripts/stop.sh"
   },

@@ -6,3 +6,4 @@ COPY apps/web ./apps/web
 RUN npm ci --ignore-scripts && npm run build -w @defchain/shared && npm run build -w @defchain/web
 FROM nginx:1.29-alpine
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
+COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf

@@ -25,8 +25,15 @@ if [ ! -x .fabric/bin/peer ]; then
   curl -fL "https://github.com/hyperledger/fabric/releases/download/v${FABRIC_VERSION}/hyperledger-fabric-linux-amd64-${FABRIC_VERSION}.tar.gz" -o "$archive"
   tar -xzf "$archive" -C .fabric
   rm -f "$archive"
-  for image in peer orderer tools ccenv nodeenv baseos; do docker pull "hyperledger/fabric-${image}:${FABRIC_VERSION}"; done
+  for image in peer orderer tools ccenv; do docker pull "hyperledger/fabric-${image}:${FABRIC_VERSION}"; done
+  FABRIC_RUNTIME_VERSION="${FABRIC_RUNTIME_VERSION:-2.5}"
+  for image in nodeenv baseos; do docker pull "hyperledger/fabric-${image}:${FABRIC_RUNTIME_VERSION}"; done
 fi
+FABRIC_RUNTIME_VERSION="${FABRIC_RUNTIME_VERSION:-2.5}"
+for image in nodeenv baseos; do
+  docker image inspect "hyperledger/fabric-${image}:${FABRIC_RUNTIME_VERSION}" >/dev/null 2>&1 ||
+    docker pull "hyperledger/fabric-${image}:${FABRIC_RUNTIME_VERSION}"
+done
 
 npm install
 bash scripts/generate-demo-secrets.sh

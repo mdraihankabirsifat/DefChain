@@ -20,11 +20,15 @@ import {
   apiQuerySchema,
   decryptPayload,
   DefChainError,
+  modeLabel,
+  parseFabricNetworkMode,
+  PROVIDERS_BY_MODE,
   loginSchema,
   protectedMatchToken,
   safeRandomId,
   sha256,
   verifyReceipt,
+  validateDecisionScopes,
   type AccessRequest,
   type DisclosureReceipt,
   type LedgerRecord,
@@ -40,6 +44,9 @@ const root = fileURLToPath(new URL("../../../", import.meta.url));
 loadEnv({ path: path.join(root, ".env"), quiet: true });
 const database = new GatewayDatabase(root);
 const fabric = new FabricClient(root);
+const networkMode = parseFabricNetworkMode(process.env.FABRIC_NETWORK_MODE);
+const configuredProviders = [...PROVIDERS_BY_MODE[networkMode]];
+export const dependencies = { database, fabric, callAdapter };
 const jwtSecret =
   process.env.JWT_SECRET ?? "defchain-controlled-demo-jwt-secret-change-me";
 export const app = express();
@@ -68,6 +75,30 @@ function event(
     safeContext: context,
     createdAt: new Date().toISOString(),
   });
+}
+function requireConfiguredProvider(provider: string): void {
+  if (
+    !configuredProviders.includes(
+      provider as (typeof configuredProviders)[number],
+    )
+  )
+    throw new DefChainError(
+      "PROVIDER_UNAVAILABLE_IN_MODE",
+      `${provider.replace("MSP", "")} is unavailable in ${modeLabel(networkMode)}.`,
+      422,
+    );
+}
+
+function providerFailure(providerOrg: string) {
+  return {
+    providerOrg,
+    status: "FAILED" as const,
+    error: {
+      code: "PROVIDER_ATTESTATION_FAILED",
+      message:
+        "Provider attestation failed safely; the committed query remains available.",
+    },
+  };
 }
 function requireAuth(
   req: AuthRequest,
@@ -180,10 +211,20 @@ app.get("/api/v1/health", async (_req, res) => {
   res.status(blockchain.available ? 200 : 503).json({
     service: "gateway-api",
     blockchain,
-    mode: process.env.FABRIC_NETWORK_MODE ?? "lite",
+    mode: networkMode,
+    modeLabel: modeLabel(networkMode),
+    providers: configuredProviders,
     syntheticData: true,
   });
 });
+app.get("/api/v1/config", (_req, res) =>
+  res.json({
+    mode: networkMode,
+    modeLabel: modeLabel(networkMode),
+    providers: configuredProviders,
+    syntheticData: true,
+  }),
+);
 app.get("/api/v1/cases", requireAuth, (req: AuthRequest, res) =>
   res.json({ cases: database.activeCases(req.user!.organization) }),
 );
@@ -227,6 +268,15 @@ app.post(
           429,
         );
       }
+      for (const target of input.targetOrganizations) {
+        if (target === appUser.organization)
+          throw new DefChainError(
+            "INVALID_QUERY_TARGET",
+            "Requester organization cannot be a provider target.",
+            400,
+          );
+        requireConfiguredProvider(target);
+      }
       const queryId = safeRandomId("query");
       const query = await fabric.submit(
         appUser.organization,
@@ -248,22 +298,122 @@ app.post(
           "defchain-controlled-demo-match-key-change-me",
         process.env.TOKEN_EPOCH ?? "2026-Q3",
       );
-      const attestations = [];
+      const attestations: LedgerRecord[] = [];
+      const providerResults: Array<
+        | { providerOrg: string; status: "ATTESTED"; attestation: LedgerRecord }
+        | ReturnType<typeof providerFailure>
+      > = [];
       for (const target of input.targetOrganizations) {
-        if (target === appUser.organization) continue;
-        const response = await callAdapter<{ attestation: LedgerRecord }>(
-          target,
-          "/internal/match",
-          { queryId, protectedToken: token },
-        );
-        attestations.push(response.attestation);
+        try {
+          const response = await dependencies.callAdapter<{
+            attestation: LedgerRecord;
+          }>(target, "/internal/match", { queryId, protectedToken: token });
+          attestations.push(response.attestation);
+          providerResults.push({
+            providerOrg: target,
+            status: "ATTESTED",
+            attestation: response.attestation,
+          });
+        } catch {
+          providerResults.push(providerFailure(target));
+        }
       }
-      res.status(201).json({
+      const partial = providerResults.some(
+        (result) => result.status === "FAILED",
+      );
+      res.status(partial ? 207 : 201).json({
         query,
         attestations,
+        providerResults,
+        partial,
         notice:
           "MATCH is a provider attestation, not proof of guilt, source accuracy, or entitlement to a record.",
       });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+app.post(
+  "/api/v1/queries/:queryId/attestations/retry",
+  requireAuth,
+  role("INVESTIGATOR"),
+  async (req: AuthRequest, res, next) => {
+    try {
+      const syntheticIdentifier = String(req.body?.syntheticIdentifier ?? "");
+      const requestedProviders = Array.isArray(req.body?.providerOrganizations)
+        ? req.body.providerOrganizations.map(String)
+        : [];
+      if (
+        !/^TEST-NID-[0-9]{4}$/.test(syntheticIdentifier) ||
+        !requestedProviders.length
+      )
+        throw new DefChainError(
+          "VALIDATION_ERROR",
+          "Retry input is invalid.",
+          400,
+        );
+      const workflow = await dependencies.fabric.evaluate<LedgerRecord[]>(
+        req.user!.organization,
+        "GetWorkflow",
+        String(req.params.queryId),
+      );
+      const query = workflow.find(
+        (record) => record.recordType === "QueryRequest",
+      );
+      if (
+        !query ||
+        query.recordType !== "QueryRequest" ||
+        query.requesterOrg !== req.user!.organization
+      )
+        throw new DefChainError("QUERY_NOT_FOUND", "Query not found.", 404);
+      const alreadyAttested = new Set(
+        workflow
+          .filter((record) => record.recordType === "MatchAttestation")
+          .map((record) => record.providerOrg),
+      );
+      const token = protectedMatchToken(
+        syntheticIdentifier,
+        process.env.MATCH_HMAC_KEY ??
+          "defchain-controlled-demo-match-key-change-me",
+        process.env.TOKEN_EPOCH ?? "2026-Q3",
+      );
+      const providerResults = [];
+      for (const provider of requestedProviders) {
+        requireConfiguredProvider(provider);
+        if (!query.targetOrganizations.includes(provider as never))
+          throw new DefChainError(
+            "INVALID_QUERY_TARGET",
+            "Provider was not targeted by this query.",
+            400,
+          );
+        if (alreadyAttested.has(provider as never))
+          throw new DefChainError(
+            "ATTESTATION_ALREADY_EXISTS",
+            "Provider already attested to this query.",
+            409,
+          );
+        try {
+          const response = await dependencies.callAdapter<{
+            attestation: LedgerRecord;
+          }>(provider as never, "/internal/match", {
+            queryId: query.queryId,
+            protectedToken: token,
+          });
+          providerResults.push({
+            providerOrg: provider,
+            status: "ATTESTED",
+            attestation: response.attestation,
+          });
+        } catch {
+          providerResults.push(providerFailure(provider));
+        }
+      }
+      const partial = providerResults.some(
+        (result) => result.status === "FAILED",
+      );
+      res.status(partial ? 207 : 201).json({ query, providerResults, partial });
     } catch (error) {
       next(error);
     }
@@ -319,6 +469,7 @@ app.post(
         );
       }
       const input = apiAccessSchema.parse(req.body);
+      requireConfiguredProvider(input.providerOrg);
       const requestId = safeRandomId("request");
       const workflow = await fabric.evaluate<LedgerRecord[]>(
         req.user!.organization,
@@ -356,6 +507,7 @@ app.get(
   role("PROVIDER_OFFICER"),
   async (req: AuthRequest, res, next) => {
     try {
+      requireConfiguredProvider(req.user!.organization);
       const queries = await fabric.evaluate<LedgerRecord[]>(
         req.user!.organization,
         "ListWorkflows",
@@ -399,10 +551,41 @@ app.post(
   async (req: AuthRequest, res, next) => {
     try {
       const input = apiDecisionSchema.parse(req.body);
-      const result = await callAdapter<{ decision: LedgerRecord }>(
+      requireConfiguredProvider(req.user!.organization);
+      const access = await dependencies.fabric.evaluate<AccessRequest>(
+        req.user!.organization,
+        "GetRecord",
+        `ACCESS::${req.params.requestId}`,
+      );
+      if (access.providerOrg !== req.user!.organization)
+        throw new DefChainError(
+          "FORBIDDEN",
+          "Provider organization mismatch.",
+          403,
+        );
+      const approvedScopes =
+        input.decision === "APPROVE"
+          ? access.requestedScopes
+          : input.decision === "DENY"
+            ? []
+            : input.approvedScopes;
+      try {
+        validateDecisionScopes(
+          input.decision,
+          approvedScopes,
+          access.requestedScopes,
+        );
+      } catch {
+        throw new DefChainError(
+          "INVALID_DECISION_SCOPES",
+          "Decision scopes do not match the requested scopes.",
+          400,
+        );
+      }
+      const result = await dependencies.callAdapter<{ decision: LedgerRecord }>(
         req.user!.organization,
         "/internal/decisions",
-        { requestId: req.params.requestId, ...input },
+        { requestId: req.params.requestId, ...input, approvedScopes },
       );
       res.status(201).json(result);
     } catch (error) {

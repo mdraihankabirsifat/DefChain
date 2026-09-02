@@ -17,6 +17,7 @@ import {
   safeRandomId,
   sha256,
   signReceipt,
+  validateDecisionScopes,
   type AccessRequest,
   type AuthorizationDecision,
   type DisclosureScope,
@@ -112,6 +113,12 @@ app.post("/internal/match", async (req, res, next) => {
 
 app.post("/internal/decisions", async (req, res, next) => {
   try {
+    const access = await fabric.evaluate<AccessRequest>(
+      org,
+      "GetRecord",
+      `ACCESS::${String(req.body.requestId ?? "")}`,
+    );
+    if (access.providerOrg !== org) throw new Error("PROVIDER_MISMATCH");
     const input = decisionInputSchema.parse({
       ...req.body,
       decisionId: req.body.decisionId ?? safeRandomId("decision"),
@@ -120,6 +127,11 @@ app.post("/internal/decisions", async (req, res, next) => {
         req.body.expiresAt ?? new Date(Date.now() + 15 * 60_000).toISOString(),
       policyVersion: "demo-1",
     });
+    validateDecisionScopes(
+      input.decision,
+      input.approvedScopes,
+      access.requestedScopes,
+    );
     const decision = await fabric.submit(
       org,
       "RecordAuthorizationDecision",

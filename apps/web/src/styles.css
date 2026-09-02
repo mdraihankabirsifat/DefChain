@@ -491,6 +491,19 @@ legend {
   background: var(--cyan);
   box-shadow: 0 0 12px var(--cyan);
 }
+.result-dot.failed {
+  background: var(--red);
+  box-shadow: 0 0 12px #ff6b6b66;
+}
+.partial-warning {
+  border: 1px solid #8a6a35;
+  background: #302716;
+  color: #f1cc8b;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .notice {
   font-size: 11px;
   color: #8ba4b2;

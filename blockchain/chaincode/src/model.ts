@@ -35,7 +35,10 @@ export const queryInputSchema = z
     policyVersion: z.string().min(1).max(24),
     createdByRole: z.literal("INVESTIGATOR"),
   })
-  .strict();
+  .strict()
+  .refine(
+    (v) => new Set(v.targetOrganizations).size === v.targetOrganizations.length,
+  );
 export const matchInputSchema = z
   .object({
     attestationId: id,
@@ -57,6 +60,7 @@ export const accessInputSchema = z
     justificationHash: hash,
   })
   .strict()
+  .refine((v) => new Set(v.requestedScopes).size === v.requestedScopes.length)
   .refine((v) => v.requesterOrg !== v.providerOrg);
 export const decisionInputSchema = z
   .object({
@@ -71,6 +75,11 @@ export const decisionInputSchema = z
   })
   .strict()
   .superRefine((v, ctx) => {
+    if (new Set(v.approvedScopes).size !== v.approvedScopes.length)
+      ctx.addIssue({
+        code: "custom",
+        message: "Approved scopes must be unique",
+      });
     if (v.decision === "DENY" && v.approvedScopes.length)
       ctx.addIssue({ code: "custom", message: "DENY cannot include scopes" });
     if (v.decision !== "DENY" && !v.approvedScopes.length)

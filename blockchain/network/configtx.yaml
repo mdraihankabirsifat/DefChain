@@ -92,6 +92,7 @@ Orderer: &OrdererDefaults
     Writers: { Type: ImplicitMeta, Rule: "ANY Writers" }
     Admins: { Type: ImplicitMeta, Rule: "MAJORITY Admins" }
     BlockValidation: { Type: ImplicitMeta, Rule: "ANY Writers" }
+  Capabilities: *OrdererCapabilities
 
 Channel: &ChannelDefaults
   Policies:

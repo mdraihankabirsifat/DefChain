@@ -182,12 +182,22 @@ export class DefChainContract extends Contract {
       )
     )
       throw new Error("ERR_SCOPE_ESCALATION: Approved scope was not requested");
+    const approved = new Set(input.approvedScopes);
+    const requested = new Set(request.requestedScopes);
     if (
       input.decision === "APPROVE" &&
-      input.approvedScopes.length !== request.requestedScopes.length
+      (approved.size !== requested.size ||
+        [...requested].some((scope) => !approved.has(scope)))
     )
       throw new Error(
         "ERR_ILLEGAL_TRANSITION: APPROVE must grant all scopes; use PARTIAL",
+      );
+    if (
+      input.decision === "PARTIAL" &&
+      (approved.size === 0 || approved.size >= requested.size)
+    )
+      throw new Error(
+        "ERR_ILLEGAL_TRANSITION: PARTIAL must grant a non-empty proper subset",
       );
     if (
       input.decision !== "DENY" &&

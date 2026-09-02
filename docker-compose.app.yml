@@ -5,6 +5,7 @@ services:
     env_file: .env
     environment:
       - BIND_HOST=0.0.0.0
+      - FABRIC_NETWORK_MODE=${FABRIC_NETWORK_MODE:-lite}
       - POLICE_PEER_ENDPOINT=peer0.police.defchain.local:7051
       - RAB_PEER_ENDPOINT=peer0.rab.defchain.local:8051
       - BGB_PEER_ENDPOINT=peer0.bgb.defchain.local:9051
@@ -34,6 +35,7 @@ services:
       - ./blockchain/network/organizations:/app/blockchain/network/organizations:ro
     networks: [app, defchain]
   bgb-adapter:
+    profiles: [full]
     build: { context: ., dockerfile: services/agency-adapter/Dockerfile }
     env_file: .env
     environment:
@@ -49,6 +51,7 @@ services:
       - ./blockchain/network/organizations:/app/blockchain/network/organizations:ro
     networks: [app, defchain]
   customs-adapter:
+    profiles: [full]
     build: { context: ., dockerfile: services/agency-adapter/Dockerfile }
     env_file: .env
     environment:
@@ -66,6 +69,7 @@ services:
   web:
     build: { context: ., dockerfile: apps/web/Dockerfile }
     ports: ["5173:80"]
+    depends_on: [gateway-api]
     networks: [app]
 networks:
   app: { internal: true }

@@ -101,6 +101,7 @@ services:
     container_name: peer0.police.defchain.local
     volumes:
       - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../../.fabric/config:/etc/hyperledger/peercfg:ro
       - ./organizations/peerOrganizations/police.defchain.local/peers/peer0.police.defchain.local:/etc/hyperledger/fabric
       - police-peer-data:/var/hyperledger/production
     environment:
@@ -148,6 +149,7 @@ services:
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=defchain_network
     volumes:
       - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../../.fabric/config:/etc/hyperledger/peercfg:ro
       - ./organizations/peerOrganizations/rab.defchain.local/peers/peer0.rab.defchain.local:/etc/hyperledger/fabric
       - rab-peer-data:/var/hyperledger/production
     command: peer node start
@@ -177,6 +179,7 @@ services:
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=defchain_network
     volumes:
       - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../../.fabric/config:/etc/hyperledger/peercfg:ro
       - ./organizations/peerOrganizations/bgb.defchain.local/peers/peer0.bgb.defchain.local:/etc/hyperledger/fabric
       - bgb-peer-data:/var/hyperledger/production
     command: peer node start
@@ -206,6 +209,7 @@ services:
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=defchain_network
     volumes:
       - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../../.fabric/config:/etc/hyperledger/peercfg:ro
       - ./organizations/peerOrganizations/customs.defchain.local/peers/peer0.customs.defchain.local:/etc/hyperledger/fabric
       - customs-peer-data:/var/hyperledger/production
     command: peer node start
