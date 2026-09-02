@@ -26,7 +26,12 @@ if [ "$MODE" = full ]; then orgs+=(BGBMSP CustomsMSP); policy="OR('PoliceMSP.pee
 npm run build -w @defchain/chaincode
 mkdir -p "$NETWORK/channel-artifacts"
 rm -f "$PACKAGE"
-peer lifecycle chaincode package "$PACKAGE" --path "$ROOT/blockchain/chaincode" --lang node --label "$LABEL"
+package_dir="$(mktemp -d)"
+trap 'rm -rf "$package_dir"' EXIT
+jq -cn '{address:"defchain-chaincode:9999",dial_timeout:"10s",tls_required:false}' > "$package_dir/connection.json"
+tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -C "$package_dir" -czf "$package_dir/code.tar.gz" connection.json
+jq -cn --arg label "$LABEL" '{type:"ccaas",label:$label}' > "$package_dir/metadata.json"
+tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -C "$package_dir" -czf "$PACKAGE" metadata.json code.tar.gz
 for org in "${orgs[@]}"; do
   set_peer "$org"
   peer lifecycle chaincode install "$PACKAGE" 2>&1 | tee "$NETWORK/logs-${org}-install.txt" || grep -q 'already successfully installed' "$NETWORK/logs-${org}-install.txt"
@@ -34,6 +39,7 @@ done
 set_peer PoliceMSP
 PACKAGE_ID="$(peer lifecycle chaincode queryinstalled | sed -n "s/^Package ID: \([^,]*\), Label: $LABEL$/\1/p" | head -n1)"
 [ -n "$PACKAGE_ID" ] || { echo 'Could not resolve installed chaincode package ID.' >&2; exit 1; }
+CHAINCODE_ID="$PACKAGE_ID" docker compose -f "$NETWORK/docker-compose.yml" --profile chaincode up -d --build defchain-chaincode
 for org in "${orgs[@]}"; do
   set_peer "$org"
   peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer0.defchain.local --tls --cafile "$ORDERER_CA" --channelID "$CHANNEL" --name "$NAME" --version 0.1 --package-id "$PACKAGE_ID" --sequence "$SEQUENCE" --signature-policy "$policy"

@@ -34,6 +34,7 @@
     "verify": "npm run build && npm test && bash scripts/verify-ledger-leakage.sh",
     "benchmark": "bash scripts/benchmark.sh",
     "verify:production": "bash scripts/verify-production-routing.sh",
+    "verify:persistence": "bash scripts/verify-persistence.sh",
     "reset": "bash scripts/reset.sh",
     "stop": "bash scripts/stop.sh"
   },

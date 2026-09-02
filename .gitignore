@@ -13,6 +13,7 @@ blockchain/network/logs/
 *.log
 *.tsbuildinfo
 test-results/
+blockchain/network/logs-*.txt
 playwright-report/
 .DS_Store
 Thumbs.db

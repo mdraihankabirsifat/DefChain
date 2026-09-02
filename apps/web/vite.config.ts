@@ -3,5 +3,10 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 5173, proxy: { "/api": "http://127.0.0.1:4000" } },
+  server: {
+    host: "0.0.0.0",
+    allowedHosts: ["host.docker.internal", "localhost"],
+    port: 5173,
+    proxy: { "/api": "http://127.0.0.1:4000" },
+  },
 });

@@ -637,6 +637,7 @@ function Disclosure() {
         <label>
           {mode === "request" ? "Query ID" : "Request ID"}
           <input
+            key={mode}
             name={mode === "request" ? "queryId" : "requestId"}
             defaultValue={
               localStorage.getItem(

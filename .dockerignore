@@ -1,0 +1,12 @@
+.git
+.fabric
+node_modules
+**/node_modules
+**/dist
+blockchain/network/organizations
+blockchain/network/channel-artifacts
+blockchain/network/logs-*.txt
+config/runtime
+data/runtime
+assets/screenshots
+*.log

@@ -70,7 +70,8 @@ services:
     build: { context: ., dockerfile: apps/web/Dockerfile }
     ports: ["5173:80"]
     depends_on: [gateway-api]
-    networks: [app]
+    networks: [app, edge]
 networks:
   app: { internal: true }
+  edge: {}
   defchain: { external: true, name: defchain_network }

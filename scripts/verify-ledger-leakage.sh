@@ -7,7 +7,7 @@ export CORE_PEER_TLS_ROOTCERT_FILE="$NETWORK/organizations/peerOrganizations/pol
 export CORE_PEER_MSPCONFIGPATH="$NETWORK/organizations/peerOrganizations/police.defchain.local/users/Admin@police.defchain.local/msp"
 CHANNEL="${FABRIC_CHANNEL:-defchain-channel}"
 out="$ROOT/data/runtime/decoded-blocks"; mkdir -p "$out"; find "$out" -mindepth 1 -maxdepth 1 -type f -delete
-height="$(peer channel getinfo -c "$CHANNEL" | sed -n 's/.*height:\([0-9]*\).*/\1/p')"
+height="$(peer channel getinfo -c "$CHANNEL" | sed -n 's/.*"height":\([0-9]*\).*/\1/p')"
 [[ "$height" =~ ^[0-9]+$ ]] || { echo 'Could not determine ledger height.' >&2; exit 1; }
 for ((i=0;i<height;i++)); do
   peer channel fetch "$i" "$out/$i.block" -c "$CHANNEL" -o localhost:7050 --ordererTLSHostnameOverride orderer0.defchain.local --tls --cafile "$NETWORK/organizations/ordererOrganizations/defchain.local/orderers/orderer0.defchain.local/tls/ca.crt" >/dev/null 2>&1

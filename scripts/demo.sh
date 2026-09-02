@@ -18,4 +18,5 @@ tx_id="$(printf '%s' "$record" | jq -r .txId)"
 [[ "$tx_id" =~ ^[a-f0-9]{64}$ ]] || { echo 'Smoke write did not return a real Fabric transaction ID.' >&2; exit 1; }
 mkdir -p "$ROOT/data/runtime"
 printf '%s\n' "$tx_id" > "$ROOT/data/runtime/last-fabric-tx-id.txt"
+printf '%s\n' "$query_id" > "$ROOT/data/runtime/last-fabric-query-id.txt"
 echo "Queried committed QueryRequest $query_id; Fabric tx ID: $tx_id"
