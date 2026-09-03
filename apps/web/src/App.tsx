@@ -23,6 +23,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { login, request, type DemoUser } from "./api";
+import { partialScopeValidationMessage } from "./decision-scopes";
 
 type LedgerRecord = Record<string, unknown> & {
   recordType: string;
@@ -589,6 +590,10 @@ function Disclosure() {
   const [mode, setMode] = useState<"request" | "receive">("request");
   const [output, setOutput] = useState<Record<string, unknown>>();
   const [error, setError] = useState("");
+  const access = output?.access as LedgerRecord | undefined;
+  const receipt = output?.receipt as LedgerRecord | undefined;
+  const verified =
+    output?.encryptionVerified === true && output?.signatureVerified === true;
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -688,6 +693,29 @@ function Disclosure() {
         </button>
       </form>
       {error && <p className="error">{error}</p>}
+      {mode === "request" && access && (
+        <div className="proof decision-proof" data-testid="access-proof">
+          <span>
+            <strong>AccessRequest committed</strong>
+            <small>{(access.requestedScopes ?? []).join(" · ")}</small>
+          </span>
+          <CopyButton value={access.txId} />
+        </div>
+      )}
+      {mode === "receive" && verified && receipt && (
+        <div className="verification-summary" data-testid="verified-receipt">
+          <div>
+            <BadgeCheck />
+            <span>
+              <strong>Disclosure verified</strong>
+              <small>
+                Encryption, signature, and ledger receipt checks passed.
+              </small>
+            </span>
+          </div>
+          <CopyButton value={receipt.txId} />
+        </div>
+      )}
       {output && (
         <pre className="output">{JSON.stringify(output, null, 2)}</pre>
       )}
@@ -698,6 +726,10 @@ function Disclosure() {
 function ProviderInbox() {
   const [items, setItems] = useState<LedgerRecord[]>([]);
   const [error, setError] = useState("");
+  const [partialScopes, setPartialScopes] = useState<Record<string, string[]>>(
+    {},
+  );
+  const [confirmation, setConfirmation] = useState<LedgerRecord>();
   const load = () =>
     request<{ requests: LedgerRecord[] }>("/provider/inbox")
       .then((r) => setItems(r.requests))
@@ -705,25 +737,55 @@ function ProviderInbox() {
   useEffect(() => {
     void load();
   }, []);
+  function togglePartialScope(requestId: string, scope: string) {
+    setPartialScopes((current) => {
+      const selected = current[requestId] ?? [];
+      return {
+        ...current,
+        [requestId]: selected.includes(scope)
+          ? selected.filter((value) => value !== scope)
+          : [...selected, scope],
+      };
+    });
+  }
   async function decide(
     item: LedgerRecord,
     decision: "APPROVE" | "PARTIAL" | "DENY",
   ) {
+    const requestedScopes = item.requestedScopes ?? [];
+    const selectedScopes = partialScopes[String(item.requestId)] ?? [];
+    if (decision === "PARTIAL") {
+      const validationMessage = partialScopeValidationMessage(
+        requestedScopes,
+        selectedScopes,
+      );
+      if (validationMessage) {
+        setError(validationMessage);
+        return;
+      }
+    }
     try {
-      await request(`/provider/requests/${item.requestId}/decision`, {
-        method: "POST",
-        body: JSON.stringify({
-          decision,
-          approvedScopes:
-            decision === "DENY"
-              ? []
-              : decision === "PARTIAL"
-                ? (item.requestedScopes ?? []).slice(0, 1)
-                : (item.requestedScopes ?? []),
-          reasonCode:
-            decision === "DENY" ? "SCOPE_NOT_JUSTIFIED" : "POLICY_CHECK_PASSED",
-        }),
-      });
+      setError("");
+      const result = await request<{ decision: LedgerRecord }>(
+        `/provider/requests/${item.requestId}/decision`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            decision,
+            approvedScopes:
+              decision === "DENY"
+                ? []
+                : decision === "PARTIAL"
+                  ? selectedScopes
+                  : requestedScopes,
+            reasonCode:
+              decision === "DENY"
+                ? "SCOPE_NOT_JUSTIFIED"
+                : "POLICY_CHECK_PASSED",
+          }),
+        },
+      );
+      setConfirmation(result.decision);
       void load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Decision failed");
@@ -739,30 +801,77 @@ function ProviderInbox() {
         <ClipboardCheck />
       </div>
       {error && <p className="error">{error}</p>}
+      {confirmation && (
+        <div className="proof decision-proof">
+          <span>
+            <strong>{confirmation.decision} decision committed</strong>
+            <small>
+              {((confirmation.approvedScopes as string[]) ?? []).join(" · ") ||
+                "No scopes approved"}
+            </small>
+          </span>
+          <CopyButton value={confirmation.txId} />
+        </div>
+      )}
       {!items.length ? (
         <Empty text="No pending access requests for this provider identity." />
       ) : (
-        items.map((item) => (
-          <article className="request" key={item.requestId}>
-            <div>
-              <strong>Access request</strong>
-              <CopyButton value={item.requestId as string} />
-              <p>{(item.requestedScopes as string[]).join(" · ")}</p>
-            </div>
-            <div className="actions">
-              <button onClick={() => decide(item, "DENY")} className="danger">
-                Deny
-              </button>
-              <button onClick={() => decide(item, "PARTIAL")}>Partial</button>
-              <button
-                onClick={() => decide(item, "APPROVE")}
-                className="primary"
-              >
-                Approve
-              </button>
-            </div>
-          </article>
-        ))
+        items.map((item) => {
+          const requestId = String(item.requestId);
+          const requestedScopes = item.requestedScopes ?? [];
+          const selectedScopes = partialScopes[requestId] ?? [];
+          const partialMessage = partialScopeValidationMessage(
+            requestedScopes,
+            selectedScopes,
+          );
+          return (
+            <article className="request" key={requestId}>
+              <div>
+                <strong>Access request</strong>
+                <CopyButton value={requestId} />
+                <fieldset className="partial-scope-control">
+                  <legend>Scopes approved for Partial</legend>
+                  {requestedScopes.map((scope) => (
+                    <label className="check" key={scope}>
+                      <input
+                        type="checkbox"
+                        checked={selectedScopes.includes(scope)}
+                        onChange={() => togglePartialScope(requestId, scope)}
+                        aria-label={`Include ${scope} for Partial`}
+                      />
+                      {scope.replaceAll("_", " ")}
+                    </label>
+                  ))}
+                  <small
+                    className={
+                      partialMessage ? "scope-guidance" : "scope-valid"
+                    }
+                  >
+                    {partialMessage ||
+                      "Valid non-empty proper subset selected."}
+                  </small>
+                </fieldset>
+              </div>
+              <div className="actions">
+                <button onClick={() => decide(item, "DENY")} className="danger">
+                  Deny
+                </button>
+                <button
+                  onClick={() => decide(item, "PARTIAL")}
+                  disabled={Boolean(partialMessage)}
+                >
+                  Partial
+                </button>
+                <button
+                  onClick={() => decide(item, "APPROVE")}
+                  className="primary"
+                >
+                  Approve
+                </button>
+              </div>
+            </article>
+          );
+        })
       )}
     </section>
   );

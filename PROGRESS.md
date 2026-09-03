@@ -4,13 +4,14 @@ Last updated: 2026-09-03 (Asia/Dhaka)
 
 ## Current status
 
-- The authoritative initialization and final-completion prompts have been read completely.
+- The authoritative initialization, final-completion, and last-minimal-submission prompts have been read completely.
 - Docker Desktop 4.89.0, Docker Engine 29.7.2, and Compose 5.5.0 are reachable from WSL2 Ubuntu.
 - A user-local WSL toolchain is installed: NVM 0.40.3, Node 22.23.2, npm 10.9.8, and jq 1.8.1. No administrator action was required.
-- Shared lite/full configuration, partial-query responses and retry, decision-scope invariants, production Nginx routing, CCAAS chaincode deployment, and expanded tests are implemented.
+- Shared lite/full configuration, partial-query responses and retry, decision-scope invariants, provider selection of a nonempty proper subset for PARTIAL decisions, production Nginx routing, CCAAS chaincode deployment, and expanded tests are implemented.
 - The npm workspace, shared privacy/validation package, Fabric client, TypeScript chaincode, isolated agency adapters/SQLite files, secured gateway API, role-aware React UI, lite/full Fabric configuration, lifecycle/leakage/demo scripts, tests, and competition documentation are present.
 - The real Fabric lite workflow, real-Fabric integration suite, browser happy path, production proxy routing, decoded-block leakage scan, and ledger persistence across a complete container restart pass.
-- Handoff state: the full Fabric and production application stacks are running; `http://localhost:5173/api/v1/health` reports Full Demo, all three providers, and Fabric available.
+- Eight final full-mode screenshots were produced by one successful real-Fabric Playwright run and visually inspected before the obsolete three-image set was removed.
+- Handoff state: the software prototype is complete and the full Fabric/production stacks are running. The external submission package is not complete because the whitepaper copy, corrected poster, pitch deck, and 600-second MP4 were not found locally.
 
 ## Completed milestones
 
@@ -24,11 +25,13 @@ Last updated: 2026-09-03 (Asia/Dhaka)
 - [x] Rehearse clean destructive reset/rebootstrap and record a new commit-confirmed/query-back transaction.
 - [x] Bootstrap and validate the full three-provider/four-peer/three-orderer topology.
 - [x] Run final static, unit, security, integration, browser, production-routing, leakage, persistence, reset, and benchmark checks.
+- [x] Implement the last minimal-submission prompt: selectable provider PARTIAL scopes, corrected API documentation, eight inspected screenshots, submission checklist, and demo credential handoff.
 
 ## Exact commands last run
 
 ```powershell
 Get-Content -LiteralPath 'E:\Downloads\DefChain_Prototype_Initialization_Bulk_Prompt.txt' -Raw
+Get-Content -LiteralPath 'E:\Downloads\DefChain_Last_Minimal_Submission_Master_Prompt.txt' -Raw
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash scripts/bootstrap.sh lite'
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && RUN_REAL_FABRIC_TESTS=true npm run test:integration'
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash scripts/verify-production-routing.sh'
@@ -47,6 +50,15 @@ wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && env PATH=/home/raihan_kab
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && env PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin npm run format:check'
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && env PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin npm run build'
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full up -d'
+FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full build web
+FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full up -d --no-deps --force-recreate web
+docker run --rm --add-host host.docker.internal:host-gateway -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:5173 -e EXPECTED_DEMO_MODE=full -v /mnt/d/Documents/Projects/DefChain:/work -w /work mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test
+npm run format:check
+npm run typecheck
+npm run lint
+npm run build
+npm test
+npm run test:security
 ```
 
 ## Last successful real Fabric transaction ID
@@ -57,22 +69,28 @@ The corresponding clean full-bootstrap query record is `query_smoke_99fb2d3795c1
 
 ## Tests
 
-- Passing: full TypeScript typecheck, production build, Prettier, ESLint, Bash syntax, 3 shared tests, 9 chaincode tests, 1 adapter test, 8 gateway tests, 1 web test, and 2 security tests.
+- Passing: full TypeScript typecheck, production build, Prettier, ESLint, Bash syntax, 3 shared tests, 9 chaincode tests, 1 adapter test, 8 gateway tests, 3 web tests, and 2 security tests.
 - Passing against real Fabric: 2 integration tests covering the five-record lifecycle and negative invariants; the Playwright browser workflow; production SPA/API proxy routing; a 25-block decoded leakage scan; and persistence across a Fabric/container restart.
 - The clean destructive reset/rebootstrap passed from deleted ledger volumes through a new VALID Fabric commit and query-back.
 - Passing in full mode: four peers, three Raft orderers, four MSP lifecycle approvals, all three provider adapters, server-authoritative full configuration, production-routed Playwright workflow, and 27-block leakage scan.
 - Benchmark result: 10 Fabric-backed evaluations, 55.863 ms average, 54.067 ms p50, 60.873 ms p95. This is a single-client correctness-oriented latency sample, not a capacity claim.
-- Final regression after completion edits: typecheck, 22 workspace tests, 2 security tests, ESLint, Prettier, Bash syntax, Compose config for both modes, and production build pass.
+- Final regression after submission edits: typecheck, 24 workspace tests, 2 security tests, ESLint, Prettier, and the production build pass. One full-mode Playwright run passed the real workflow and produced exactly eight final screenshots.
 
 ## Blockers
 
 - PowerShell execution policy blocks `npm.ps1`; use `npm.cmd` on Windows or run inside a correctly provisioned WSL shell.
 - No current external blocker. Docker Desktop WSL integration was restored without administrator action after a restart disabled its socket.
 
-## Remaining tasks
+## Remaining submission tasks
 
-No Definition-of-Done task is currently open. Optional future work is listed in `docs/FUTURE_WORK.md` and is intentionally outside the competition prototype.
+The software Definition of Done is satisfied. Human-owned submission packaging remains open:
+
+- Locate and verify the final whitepaper copy.
+- Repair and freshly export the 48-by-36-inch landscape poster from its editable source; remove hidden Wastopia content and correct DefChain metadata. Do not submit the known-bad poster export.
+- Export the final pitch deck.
+- Record/export the 600-second MP4 demo.
+- Place the verified files in a Drive folder named exactly `Team Name_Category`, enable View/Download access, and complete the freeze/deadline checks in `docs/SUBMISSION_CHECKLIST.md`.
 
 ## Resume instructions
 
-Read this file and both external prompts first. The requested completion pass is finished; do not redo destructive resets unless a new change requires them. Never substitute a mock ledger for Fabric and never claim a test or topology passed unless its command was actually run successfully. See `docs/TEST_RESULTS.md` for the exact evidence boundary.
+Read this file and the external prompts first. The code completion pass is finished; do not redo destructive resets unless a new change requires them. Continue only the explicitly listed human-owned submission tasks. Never substitute a mock ledger for Fabric and never claim a test, topology, or submission artifact passed unless it was actually verified. See `docs/TEST_RESULTS.md` for the exact evidence boundary.

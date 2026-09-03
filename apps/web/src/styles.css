@@ -454,6 +454,35 @@ legend {
   border-radius: 8px;
   font-size: 12px;
 }
+.proof span,
+.verification-summary span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.proof small,
+.verification-summary small {
+  color: var(--muted);
+}
+.verification-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid #1b5558;
+  border-radius: 9px;
+  background: #0d2b31;
+}
+.verification-summary > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.verification-summary svg {
+  color: var(--cyan);
+}
 .copy {
   display: inline-flex;
   align-items: center;
@@ -550,6 +579,26 @@ legend {
   color: var(--muted);
   font-size: 11px;
 }
+.request > div:first-child {
+  flex: 1;
+}
+.partial-scope-control {
+  margin-top: 12px;
+  max-width: 650px;
+}
+.partial-scope-control small {
+  flex-basis: 100%;
+  font-size: 11px;
+}
+.scope-guidance {
+  color: #f1cc8b;
+}
+.scope-valid {
+  color: var(--cyan);
+}
+.decision-proof {
+  margin-bottom: 12px;
+}
 .actions {
   display: flex;
   gap: 7px;
@@ -561,6 +610,10 @@ legend {
   color: #c5d6df;
   padding: 8px 12px;
   border-radius: 7px;
+}
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 .actions .danger {
   border-color: #794247;
