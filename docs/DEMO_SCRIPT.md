@@ -10,7 +10,7 @@ Log in as `police.investigator` / `PoliceDemo!2026`. Show Fabric Connected, `def
 
 ## 1:30–3:00 — Protected discovery
 
-Open Discovery. Select active case `P-2026-014`, purpose `ACTIVE_INVESTIGATION`, identifier `TEST-NID-0001`, and RAB/BGB/Customs. Submit. Explain that the browser sends the synthetic identifier to the gateway, which canonicalizes/HMACs it in memory; only the protected token reaches isolated adapters and never Fabric/logs. Show RAB MATCH, BGB/Customs NO_MATCH, and attestation tx IDs. Read the “MATCH is not guilt” notice.
+Open Discovery. Select active case `P-2026-014`, purpose `ACTIVE_INVESTIGATION`, and identifier `TEST-NID-0001`. In lite mode target RAB; in full mode target RAB/BGB/Customs. Submit. Explain that the browser sends the synthetic identifier to the gateway, which canonicalizes/HMACs it in memory; only the protected token reaches isolated adapters and never Fabric/logs. Show the RAB MATCH and, in full mode, BGB/Customs NO_MATCH results with attestation tx IDs. Read the “MATCH is not guilt” notice.
 
 ## 3:00–4:10 — Scoped request
 

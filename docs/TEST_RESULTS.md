@@ -1,52 +1,45 @@
 # Test results
 
-Date: 2026-09-01 (Asia/Dhaka)  
-Host: Windows 11, Node 26.5.0, npm 11.17.0, Git 2.50.1; WSL2 Ubuntu present.  
-Critical environment fact: Docker is not installed on Windows or WSL; Ubuntu also lacks native Node and jq.
+Date: 2026-09-03 (Asia/Dhaka)  
+Host: Windows 11 with WSL2 Ubuntu; Docker Desktop 4.89.0, Engine 29.7.2, Compose 5.5.0; native WSL Node 22.23.2, npm 10.9.8, jq 1.8.1; Hyperledger Fabric 2.5.12.
 
 ## Actually run and passed
 
-| Command/check                           | Result                                                                                                                                         |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm.cmd install`                       | 434 packages audited after quality tooling; 0 npm-reported vulnerabilities                                                                     |
-| `npm.cmd run seed`                      | Four separate agency SQLite databases seeded with one protected synthetic record each                                                          |
-| `npm.cmd run build`                     | Shared, Fabric client, chaincode, adapter, API TypeScript builds passed; Vite production build passed (217.10 kB JS, 11.51 kB CSS before gzip) |
-| `npm.cmd test`                          | 12 tests passed across shared crypto (3), chaincode (2), adapter DB (1), gateway API (5), web client (1)                                       |
-| `npm.cmd run test:security`             | 2 tests passed: HMAC non-disclosure shape; Ed25519 correct/modified receipt behavior                                                           |
-| `npm.cmd run lint`                      | ESLint TypeScript-aware pass completed with zero errors/warnings                                                                               |
-| `npm.cmd run format:check`              | All matched source/config/documentation files pass Prettier check                                                                              |
-| `bash -n` over all shell scripts        | All checked shell scripts passed syntax validation                                                                                             |
-| `npm.cmd run test:integration`          | Suite loaded successfully; 2 real-Fabric tests skipped by explicit `RUN_REAL_FABRIC_TESTS` gate                                                |
-| Running `npm.cmd run dev`               | API on 4000, RAB/BGB/Customs adapters on 4102–4104, Vite on `localhost:5173`                                                                   |
-| Running API login                       | 200 for `police.investigator`; safe profile returned                                                                                           |
-| Missing case runtime request            | 404 `CASE_NOT_FOUND`; safe event created before Fabric call                                                                                    |
-| Active-case request while Fabric absent | 503 `BLOCKCHAIN_UNAVAILABLE`; no fallback transaction                                                                                          |
-| API health while Fabric absent          | 503 with `blockchain.available: false`                                                                                                         |
-| WSL `bash scripts/bootstrap.sh lite`    | Exited non-zero with clear `Missing 'docker'` message before partial setup                                                                     |
+| Command/check                                              | Observed result                                                                                                                                |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm install` in WSL                                       | 442 packages audited; 0 npm-reported vulnerabilities                                                                                           |
+| `npm run typecheck`                                        | All six TypeScript workspaces passed                                                                                                           |
+| `npm run build`                                            | All packages/services and the Vite production build passed; latest web output was 217.62 kB JS and 11.72 kB CSS before gzip                    |
+| `npm test`                                                 | 22 workspace tests passed: shared 3, chaincode 9, adapter 1, gateway 8, web 1                                                                  |
+| `npm run test:security`                                    | 2 root security tests passed                                                                                                                   |
+| `npm run lint` / `npm run format:check`                    | ESLint and Prettier passed                                                                                                                     |
+| `bash -n` over shell scripts                               | All checked scripts passed syntax validation                                                                                                   |
+| `bash scripts/bootstrap.sh lite`                           | Police/RAB peers, one Raft orderer, channel, CCAAS chaincode, seed, VALID smoke commit, and query-back passed                                  |
+| `RUN_REAL_FABRIC_TESTS=true npm run test:integration`      | 2 real-Fabric tests passed: complete five-record lifecycle plus wrong-MSP/duplicate-key negatives                                              |
+| Playwright in `mcr.microsoft.com/playwright:v1.62.1-noble` | Complete real lite browser workflow passed; complete full production-routed browser workflow passed in 14.4 seconds                            |
+| `bash scripts/verify-production-routing.sh`                | SPA fallback and `/api` proxy behavior passed in both lite and full modes                                                                      |
+| `bash scripts/verify-ledger-leakage.sh`                    | Lite scan passed over 25 decoded blocks; final full scan passed over 27 decoded blocks with no configured identifier/token/payload/key markers |
+| `bash scripts/verify-persistence.sh`                       | Existing query returned the same transaction ID after all Fabric and CCAAS containers restarted                                                |
+| `FABRIC_NETWORK_MODE=lite bash scripts/reset.sh`           | Destructive volume/runtime reset followed by clean bootstrap, VALID commit, and query-back passed                                              |
+| `FABRIC_NETWORK_MODE=full bash scripts/reset.sh`           | Four peers, three Raft orderers, four MSP approvals, CCAAS chaincode, seed, VALID commit, and query-back passed from clean volumes             |
+| Full adapter/API checks                                    | RAB, BGB, and Customs adapters each reported Fabric reachable; `/api/v1/config` reported `full` with exactly those three providers             |
+| `bash scripts/benchmark.sh`                                | 10 Fabric-backed health evaluations: 55.863 ms average, 54.067 ms p50, 60.873 ms p95                                                           |
 
-The current unit total is 14 when workspace and root security suites are combined.
+The benchmark is single-client gateway-to-Fabric evaluation latency on one WSL2 laptop. It is not a throughput, scalability, or production-capacity result.
 
-## Not passed / not run
+## Transaction evidence
 
-The following mandatory acceptance evidence is blocked by missing Docker and is not claimed:
+- Latest clean full bootstrap: query `query_smoke_99fb2d3795c17ca48e9e2322`, transaction `91c99f210801b77dc3ae51cb8105d8cb5b2acfd2fa9180d2055d0d92465cc914`.
+- Clean lite reset before switching modes: query `query_smoke_bd70d33bceab5b04c1ccf1a8`, transaction `9246c92a3ab2bad5cd8462b0fb7bd0cb10edd537fc40c1e405ecaaf05d4cbd92`.
+- Persistence rehearsal before the intentional reset: query `query_smoke_ce2eac5d6212f76f3a1ad1d9`, unchanged transaction `e5c2715f23f4b6283242d72414ec4c7b81dcabf437ceab7e6268f86d56c30510`.
 
-- Fabric network/container startup, channel creation, chaincode lifecycle deployment, real write/commit/query, restart persistence, and real transaction ID.
-- Real wrong-MSP/provider success, approval/partial/deny/disclosure transition suite.
-- Decoded exported block leakage scan (`verify-ledger-leakage.sh`).
-- Reset/restart rehearsal against live Fabric.
-- Playwright browser E2E/screenshots and honest latency benchmark.
-- Full four-peer/three-orderer runtime proof.
+Each smoke transaction was reported VALID by the peer and then read back from Fabric. Reset intentionally removes prior ledger volumes, so the first persistence record is historical evidence rather than present state.
 
-## Next verification commands after Docker setup
+## Issues found and corrected during rehearsal
 
-```bash
-npm run bootstrap:lite
-npm run dev
-RUN_REAL_FABRIC_TESTS=true npm run test:integration
-npm run test:e2e
-npm run verify
-npm run benchmark
-npm run reset
-```
+- Docker Engine 29 exposes an API newer than Fabric 2.5’s embedded Docker client. Chaincode deployment was moved to Fabric CCAAS with no peer access to the Docker socket.
+- Persistence originally selected the first installed package when historical packages existed. It now selects the package ID approved in the channel definition.
+- Network shutdown originally left the profile-gated CCAAS container attached. It now brings down full and chaincode profiles before removing volumes, and the clean full reset passed afterward.
+- Full audit contains one MatchAttestation per provider. The browser assertion was corrected to handle the expected multiple records.
 
-Record the first queried-back real transaction ID in `PROGRESS.md`, capture command output, and update this file without converting skipped tests into passes unless they actually execute.
+Screenshots produced only after successful real-Fabric browser execution are under `assets/screenshots/`.

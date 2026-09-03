@@ -22,7 +22,7 @@ Stop the conflicting process or DefChain (`npm run stop`). Required host ports i
 
 ## Chaincode build/container exits
 
-Run `npm run build -w @defchain/chaincode`, inspect `docker logs <chaincode-container>`, then increment `CHAINCODE_SEQUENCE` and run `npm run chaincode:deploy`. Keep Fabric 2.5.12 and `fabric-contract-api`/`fabric-shim` 2.5.8 aligned.
+Run `npm run build -w @defchain/chaincode`, inspect `docker logs defchain-chaincode`, then increment `CHAINCODE_SEQUENCE` only for an intentional definition upgrade and run `npm run chaincode:deploy`. The prototype uses Fabric CCAAS so Fabric peers do not need access to the Docker socket; keep Fabric 2.5.12 and `fabric-contract-api`/`fabric-shim` 2.5.8 aligned.
 
 ## `BLOCKCHAIN_UNAVAILABLE`
 
@@ -31,3 +31,7 @@ This is intentional fail-closed behavior. Confirm the network is up, channel/cha
 ## Reset conflicts
 
 Run `npm run network:down`, verify only DefChain containers remain, then `npm run reset`. If switching lite/full, stop the old topology first because both use the same channel name/ports.
+
+## Docker Desktop restarts but WSL cannot connect
+
+Check Docker Desktop’s Ubuntu WSL integration toggle, then run `wsl --shutdown` from Windows and start Docker Desktop again. A missing `/var/run/docker.sock` is an environment integration problem; do not work around it with an unauthenticated Docker API relay.

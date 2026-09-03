@@ -38,12 +38,12 @@ sequenceDiagram
 
 ## Fabric topology
 
-| Mode | Peers                                             | Orderers                                      | Status here                               |
+| Mode | Peers                                             | Orderers                                      | Verified status                           |
 | ---- | ------------------------------------------------- | --------------------------------------------- | ----------------------------------------- |
-| Lite | PoliceMSP peer0:7051; RABMSP peer0:8051           | orderer0:7050, etcdraft/Raft                  | Configured; not run because Docker absent |
-| Full | Lite + BGBMSP peer0:9051 + CustomsMSP peer0:10051 | orderer0/1/2 on 7050/8050/9050, etcdraft/Raft | Configured strong target; not run here    |
+| Lite | PoliceMSP peer0:7051; RABMSP peer0:8051           | orderer0:7050, etcdraft/Raft                  | Bootstrapped, transacted, and restarted   |
+| Full | Lite + BGBMSP peer0:9051 + CustomsMSP peer0:10051 | orderer0/1/2 on 7050/8050/9050, etcdraft/Raft | Bootstrapped and transacted on 2026-09-03 |
 
-All modes use `defchain-channel`, `defchain` chaincode, cryptogen-generated local X.509 demo identities, TLS, and organization-specific Gateway connections. Chaincode endorsement permits a member peer, while provider-only operations additionally compare the invoker MSP to `providerOrg`. An auditor is an application-level read-only role and has no peer.
+All modes use `defchain-channel`, external-service (CCAAS) `defchain` chaincode, cryptogen-generated local X.509 demo identities, TLS, and organization-specific Gateway connections. The chaincode container has no Docker socket access. Chaincode endorsement permits a member peer, while provider-only operations additionally compare the invoker MSP to `providerOrg`. An auditor is an application-level read-only role and has no peer.
 
 ## Why not one database/API?
 

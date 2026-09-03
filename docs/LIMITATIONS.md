@@ -4,7 +4,7 @@
 - No access to Police, RAB, BGB, Customs, classified systems, national registries, production topology, or formal government partnership is claimed.
 - HMAC exact matching reveals equality within an epoch and is vulnerable if its shared key or low-entropy identifier domain is compromised. It is a competition baseline, not private-set-intersection privacy.
 - Cryptogen identities, local PEM keys, shared demo secrets, loopback/internal-network authentication, bcrypt/JWT accounts, and local SQLite are not production identity/key operations.
-- The checked-in Fabric lite/full topology has not been started on the current machine because Docker is absent. Therefore no real transaction ID, restart persistence, decoded-block leakage result, performance number, screenshot, or end-to-end Fabric success is claimed yet.
+- Both checked-in Fabric topologies have been exercised locally, including real transactions, query-back, restart persistence, decoded-block leakage scans, browser screenshots, and a small latency sample. This is single-machine prototype evidence, not an independent audit, production benchmark, or deployment-readiness claim.
 - One-peer-per-member topology and baseline OR endorsement favor demo availability over Byzantine compromise resistance. Three Raft orderers tolerate crash failures in full mode, not malicious consensus participants.
 - A MATCH does not prove guilt, identity correctness, record accuracy, relevance, legal authority, or entitlement. Blockchain records statements and decisions; it does not establish factual truth.
 - Organization/timing/purpose/scope/result metadata is visible to common-channel members.

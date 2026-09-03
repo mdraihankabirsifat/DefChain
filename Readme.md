@@ -19,7 +19,7 @@ npm run dev
 
 Open `http://localhost:5173`. API health is at `http://localhost:4000/api/v1/health`.
 
-The current machine is missing Docker and a native Node installation inside WSL. Run `npm run preflight` from Windows for exact remediation before attempting Fabric startup. DefChain never falls back to a mock ledger: ledger-changing UI/API actions are blocked when Fabric is unavailable.
+The implementation machine has Docker Desktop, native Node 22/npm 10 and the project-local Fabric 2.5.12 tools available in WSL2. Run `npm run preflight` from Windows to check another machine. DefChain never falls back to a mock ledger: ledger-changing UI/API actions are blocked when Fabric is unavailable.
 
 ## Repository map
 
@@ -51,7 +51,7 @@ These credentials are local demonstration fixtures, not production defaults.
 ## Guided path
 
 1. Log in as Police and query `TEST-NID-0001` under active case `P-2026-014` and purpose `ACTIVE_INVESTIGATION`.
-2. Observe RAB `MATCH` and BGB/Customs `NO_MATCH` attestations with real Fabric transaction IDs.
+2. In lite mode, observe the RAB `MATCH`; in full mode, target all providers and also observe BGB/Customs `NO_MATCH` attestations. Every attestation has a real Fabric transaction ID.
 3. Request `IDENTITY_CONFIRMATION` and `CASE_REFERENCE` from RAB.
 4. Switch to the RAB officer and APPROVE or PARTIAL the request. Use a second request to demonstrate DENY.
 5. Switch back to Police, execute disclosure, and verify AES-GCM integrity, Ed25519 signature, payload hash, and receipt transaction ID.
@@ -68,14 +68,16 @@ These credentials are local demonstration fixtures, not production defaults.
 - Lite target: PoliceMSP peer, RABMSP peer, one real etcdraft/Raft orderer.
 - Full target: PoliceMSP, RABMSP, BGBMSP, and CustomsMSP peers plus three etcdraft/Raft orderers.
 - Channel: `defchain-channel`; chaincode: `defchain`.
-- The topology is checked in but has not been runtime-verified on this machine because Docker is absent. No transaction ID is claimed.
+- Both topologies are runtime-verified on this machine. The latest clean full bootstrap committed and queried back transaction `91c99f210801b77dc3ae51cb8105d8cb5b2acfd2fa9180d2055d0d92465cc914`; see the test evidence for scope and date.
 
 ```bash
 npm run build
 npm test
 npm run test:security
 RUN_REAL_FABRIC_TESTS=true npm run test:integration
+FABRIC_NETWORK_MODE=full npm run verify:production
 npm run verify
+npm run benchmark
 npm run reset
 ```
 

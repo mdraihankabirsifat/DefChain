@@ -50,4 +50,4 @@ A proposed formally chartered multi-agency consortium would approve channel chan
 
 ## What is implemented versus proposed?
 
-Implemented: TypeScript chaincode, MSP checks, immutable transitions, Fabric Gateway path, isolated SQLite adapters, HMAC matching, auth/budgets/events, AES-GCM disclosure, Ed25519 receipts, role-aware UI, scripts/tests/docs. Checked in but not runtime-verified here: Fabric lite/full networks. Proposed only: production CA/HSM/KMS/mTLS/IdP, VOPRF/PSI, formal consortium/legal deployment, HA/scale.
+Implemented and locally verified: TypeScript CCAAS chaincode, MSP checks, immutable transitions, Fabric Gateway path, isolated SQLite adapters, HMAC matching, auth/budgets/events, AES-GCM disclosure, Ed25519 receipts, role-aware UI, scripts/tests/docs, and lite/full Fabric networks. Proposed only: production CA/HSM/KMS/mTLS/IdP, VOPRF/PSI, formal consortium/legal deployment, HA/scale.

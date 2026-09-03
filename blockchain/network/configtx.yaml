@@ -122,7 +122,11 @@ Profiles:
     Orderer:
       <<: *OrdererDefaults
       Addresses:
-        [orderer0.defchain.local:7050, orderer1.defchain.local:8050, orderer2.defchain.local:9050]
+        [
+          orderer0.defchain.local:7050,
+          orderer1.defchain.local:8050,
+          orderer2.defchain.local:9050,
+        ]
       Organizations: [*OrdererOrg]
       EtcdRaft:
         Consenters:

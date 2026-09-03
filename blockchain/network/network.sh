@@ -37,8 +37,19 @@ wait_port() {
 join_orderer() {
   local name="$1" admin_port="$2"
   local tls="$NETWORK_DIR/organizations/ordererOrganizations/defchain.local/orderers/$name.defchain.local/tls"
-  if osnadmin channel list -o "localhost:$admin_port" --ca-file "$tls/ca.crt" --client-cert "$tls/server.crt" --client-key "$tls/server.key" 2>/dev/null | grep -q "$CHANNEL"; then return; fi
-  osnadmin channel join --channelID "$CHANNEL" --config-block "$CHANNEL_BLOCK" -o "localhost:$admin_port" --ca-file "$tls/ca.crt" --client-cert "$tls/server.crt" --client-key "$tls/server.key"
+  local result
+  for _ in $(seq 1 20); do
+    if result="$(osnadmin channel list -o "localhost:$admin_port" --ca-file "$tls/ca.crt" --client-cert "$tls/server.crt" --client-key "$tls/server.key" 2>/dev/null)"; then
+      grep -q "$CHANNEL" <<<"$result" && return 0
+      break
+    fi
+    sleep 1
+  done
+  result="$(osnadmin channel join --channelID "$CHANNEL" --config-block "$CHANNEL_BLOCK" -o "localhost:$admin_port" --ca-file "$tls/ca.crt" --client-cert "$tls/server.crt" --client-key "$tls/server.key" 2>&1)" || {
+    grep -q 'channel already exists' <<<"$result" && return 0
+    printf '%s\n' "$result" >&2
+    return 1
+  }
 }
 
 join_peer() {
@@ -49,7 +60,7 @@ join_peer() {
 
 if [ "$ACTION" = down ]; then
   need docker
-  compose down --volumes --remove-orphans || true
+  docker compose -f "$NETWORK_DIR/docker-compose.yml" --profile full --profile chaincode down --volumes --remove-orphans || true
   while read -r container; do
     [ -n "$container" ] || continue
     name="$(docker inspect --format '{{.Name}}' "$container" 2>/dev/null || true)"
