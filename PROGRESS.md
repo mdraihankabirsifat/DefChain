@@ -10,6 +10,7 @@ Last updated: 2026-09-03 (Asia/Dhaka)
 - Shared lite/full configuration, partial-query responses and retry, decision-scope invariants, production Nginx routing, CCAAS chaincode deployment, and expanded tests are implemented.
 - The npm workspace, shared privacy/validation package, Fabric client, TypeScript chaincode, isolated agency adapters/SQLite files, secured gateway API, role-aware React UI, lite/full Fabric configuration, lifecycle/leakage/demo scripts, tests, and competition documentation are present.
 - The real Fabric lite workflow, real-Fabric integration suite, browser happy path, production proxy routing, decoded-block leakage scan, and ledger persistence across a complete container restart pass.
+- Handoff state: the full Fabric and production application stacks are running; `http://localhost:5173/api/v1/health` reports Full Demo, all three providers, and Fabric available.
 
 ## Completed milestones
 
@@ -28,34 +29,8 @@ Last updated: 2026-09-03 (Asia/Dhaka)
 
 ```powershell
 Get-Content -LiteralPath 'E:\Downloads\DefChain_Prototype_Initialization_Bulk_Prompt.txt' -Raw
-rg --files -g 'AGENTS.md' -g '!node_modules' -g '!vendor'
-Get-ChildItem -Force
-wsl.exe --status
-wsl.exe --list --verbose
-wsl.exe -d Ubuntu -- bash -lc '...toolchain checks...'
-npm.cmd install
-npm.cmd run seed
-npm.cmd run build
-npm.cmd test
-npm.cmd run test:security
-npm.cmd run test:integration
-npm.cmd run dev
-npm.cmd run preflight
-npm.cmd run format:check
-npm.cmd run lint
-wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash scripts/bootstrap.sh lite'
-# Runtime HTTP checks: login=200, missing case=404, Fabric unavailable=503, frontend=200 via localhost
-# 2026-09-02 completion pass:
-wsl.exe -d Ubuntu -- bash -lc '...Docker/Compose/WSL environment checks...'
-wsl.exe -d Ubuntu -- bash -lc '...install NVM 0.40.3, Node 22.23.2, npm 10.9.8, jq 1.8.1 under the current user...'
-npm.cmd run build -w @defchain/shared
-npm.cmd run typecheck
-npm.cmd test # stopped at one chaincode ordering assertion; fixed afterward
-npm.cmd run test -w @defchain/chaincode
-npm.cmd run test -w @defchain/gateway-api
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash scripts/bootstrap.sh lite'
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && RUN_REAL_FABRIC_TESTS=true npm run test:integration'
-docker run --rm --network host -v /mnt/d/Documents/Projects/DefChain:/work -w /work mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash scripts/verify-production-routing.sh'
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash scripts/verify-ledger-leakage.sh'
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash scripts/verify-persistence.sh'
@@ -65,6 +40,13 @@ wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && FABRIC_NETWORK_MODE=full 
 wsl bash -lc 'docker run --rm --add-host host.docker.internal:host-gateway -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:5173 -e EXPECTED_DEMO_MODE=full -v /mnt/d/Documents/Projects/DefChain:/work -w /work mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test'
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && FABRIC_NETWORK_MODE=full bash scripts/verify-ledger-leakage.sh'
 wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash scripts/benchmark.sh'
+wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && env PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin npm run typecheck'
+wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && env PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin npm test'
+wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && env PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin npm run test:security'
+wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && env PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin npm run lint'
+wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && env PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin npm run format:check'
+wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && env PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin npm run build'
+wsl bash -lc 'cd /mnt/d/Documents/Projects/DefChain && FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full up -d'
 ```
 
 ## Last successful real Fabric transaction ID

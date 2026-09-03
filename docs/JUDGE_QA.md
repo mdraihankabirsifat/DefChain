@@ -14,7 +14,7 @@ On-chain: opaque case reference, purpose, organizations, scopes, match result, d
 
 ## Who are peers and orderers?
 
-Lite has PoliceMSP and RABMSP peers plus one etcdraft orderer. Full adds BGBMSP/CustomsMSP peers and two more etcdraft orderers. The checked-in full mode is not yet runtime-proven on the current Docker-less machine.
+Lite has PoliceMSP and RABMSP peers plus one etcdraft orderer. Full adds BGBMSP/CustomsMSP peers and two more etcdraft orderers. Both modes were clean-bootstrapped and exercised locally on 2026-09-03; this is prototype evidence, not a production deployment claim.
 
 ## How are transactions verified?
 

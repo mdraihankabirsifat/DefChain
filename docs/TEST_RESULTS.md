@@ -7,7 +7,7 @@ Host: Windows 11 with WSL2 Ubuntu; Docker Desktop 4.89.0, Engine 29.7.2, Compose
 
 | Command/check                                              | Observed result                                                                                                                                |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm install` in WSL                                       | 442 packages audited; 0 npm-reported vulnerabilities                                                                                           |
+| `npm install` in WSL                                       | 400 packages audited after the final dependency update; 0 npm-reported vulnerabilities                                                         |
 | `npm run typecheck`                                        | All six TypeScript workspaces passed                                                                                                           |
 | `npm run build`                                            | All packages/services and the Vite production build passed; latest web output was 217.62 kB JS and 11.72 kB CSS before gzip                    |
 | `npm test`                                                 | 22 workspace tests passed: shared 3, chaincode 9, adapter 1, gateway 8, web 1                                                                  |
