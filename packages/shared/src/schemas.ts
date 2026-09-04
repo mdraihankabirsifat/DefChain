@@ -27,7 +27,7 @@ export const queryInputSchema = z
     purposeCode: purposeCodeSchema,
     targetOrganizations: z.array(organizationSchema).min(1).max(4),
     policyVersion: z.string().min(1).max(24),
-    createdByRole: z.literal("INVESTIGATOR"),
+    createdByRole: z.enum(["INVESTIGATOR", "PROVIDER_OFFICER"]),
   })
   .strict()
   .refine(

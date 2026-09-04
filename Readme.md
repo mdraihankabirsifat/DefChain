@@ -243,15 +243,15 @@ Current implementation status and blockers are documented in [PROGRESS.md](PROGR
 
 ## Demo accounts
 
-| Actor | Username | Password | Organization / role |
-|---|---|---|---|
-| Police investigator | `police.investigator` | `PoliceDemo!2026` | PoliceMSP / investigator |
-| RAB officer | `rab.officer` | `RabDemo!2026` | RABMSP / provider |
-| BGB officer | `bgb.officer` | `BgbDemo!2026` | BGBMSP / provider |
-| Customs officer | `customs.officer` | `CustomsDemo!2026` | CustomsMSP / provider |
-| Independent auditor | `auditor` | `AuditDemo!2026` | Read-only auditor |
-| Revoked test user | `revoked.user` | `RevokedDemo!2026` | Disabled |
-| Exhausted-budget user | `budget.exhausted` | `BudgetDemo!2026` | Zero query budget |
+| Actor                 | Username              | Password           | Organization / role      |
+| --------------------- | --------------------- | ------------------ | ------------------------ |
+| Police investigator   | `police.investigator` | `PoliceDemo!2026`  | PoliceMSP / investigator |
+| RAB officer           | `rab.officer`         | `RabDemo!2026`     | RABMSP / provider        |
+| BGB officer           | `bgb.officer`         | `BgbDemo!2026`     | BGBMSP / provider        |
+| Customs officer       | `customs.officer`     | `CustomsDemo!2026` | CustomsMSP / provider    |
+| Independent auditor   | `auditor`             | `AuditDemo!2026`   | Read-only auditor        |
+| Revoked test user     | `revoked.user`        | `RevokedDemo!2026` | Disabled                 |
+| Exhausted-budget user | `budget.exhausted`    | `BudgetDemo!2026`  | Zero query budget        |
 
 > These credentials are local demonstration fixtures and are not production credentials.
 
@@ -400,18 +400,18 @@ Stronger production directions include:
 
 ## On-chain / off-chain boundary
 
-| Common Hyperledger Fabric ledger | Kept off-chain |
-|---|---|
-| Opaque case reference | Raw identifier |
-| Purpose code | HMAC token and matching key |
-| Requester/provider organizations | Provider record |
-| MATCH / NO_MATCH result | Justification text |
-| Requested disclosure scope | Disclosure payload |
-| Approved disclosure scope | AES encryption key |
-| APPROVE / PARTIAL / DENY decision | Ed25519 private key |
-| Payload hash / signature reference | Passwords and JWTs |
-| Ledger timestamp | Sensitive database content |
-| Fabric transaction ID | Other provider-only information |
+| Common Hyperledger Fabric ledger   | Kept off-chain                  |
+| ---------------------------------- | ------------------------------- |
+| Opaque case reference              | Raw identifier                  |
+| Purpose code                       | HMAC token and matching key     |
+| Requester/provider organizations   | Provider record                 |
+| MATCH / NO_MATCH result            | Justification text              |
+| Requested disclosure scope         | Disclosure payload              |
+| Approved disclosure scope          | AES encryption key              |
+| APPROVE / PARTIAL / DENY decision  | Ed25519 private key             |
+| Payload hash / signature reference | Passwords and JWTs              |
+| Ledger timestamp                   | Sensitive database content      |
+| Fabric transaction ID              | Other provider-only information |
 
 The design intentionally keeps intelligence records out of the common blockchain.
 

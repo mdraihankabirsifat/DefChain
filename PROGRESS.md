@@ -1,6 +1,6 @@
 # DefChain Implementation Progress
 
-Last updated: 2026-09-03 (Asia/Dhaka)
+Last updated: 2026-09-04 (Asia/Dhaka)
 
 ## Current status
 
@@ -11,7 +11,7 @@ Last updated: 2026-09-03 (Asia/Dhaka)
 - The npm workspace, shared privacy/validation package, Fabric client, TypeScript chaincode, isolated agency adapters/SQLite files, secured gateway API, role-aware React UI, lite/full Fabric configuration, lifecycle/leakage/demo scripts, tests, and competition documentation are present.
 - The real Fabric lite workflow, real-Fabric integration suite, browser happy path, production proxy routing, decoded-block leakage scan, and ledger persistence across a complete container restart pass.
 - Eight final full-mode screenshots were produced by one successful real-Fabric Playwright run and visually inspected before the obsolete three-image set was removed.
-- Handoff state: the software prototype is complete and the full Fabric/production stacks are running. The external submission package is not complete because the whitepaper copy, corrected poster, pitch deck, and 600-second MP4 were not found locally.
+- Handoff state: the software prototype is complete and the full Fabric/production stacks are running at `http://localhost:5173`. Discovery now displays the application Query ID separately from the Fabric transaction ID and routes MATCH results directly into a prefilled Disclosure request. The external submission package remains incomplete because the whitepaper copy, corrected poster, pitch deck, and 600-second MP4 were not found locally.
 
 ## Completed milestones
 
@@ -26,6 +26,7 @@ Last updated: 2026-09-03 (Asia/Dhaka)
 - [x] Bootstrap and validate the full three-provider/four-peer/three-orderer topology.
 - [x] Run final static, unit, security, integration, browser, production-routing, leakage, persistence, reset, and benchmark checks.
 - [x] Implement the last minimal-submission prompt: selectable provider PARTIAL scopes, corrected API documentation, eight inspected screenshots, submission checklist, and demo credential handoff.
+- [x] Fix and verify Discovery-to-Disclosure navigation: `TEST-NID-0001` produces a RAB MATCH whose Request access action opens Disclosure with the application Query ID and RAB organization prefilled.
 
 ## Exact commands last run
 
@@ -59,6 +60,10 @@ npm run lint
 npm run build
 npm test
 npm run test:security
+wsl -e bash -lc "export PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd /mnt/d/Documents/Projects/DefChain; npm run typecheck; npm test"
+wsl -e bash -lc "cd /mnt/d/Documents/Projects/DefChain; FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full build web gateway-api"
+wsl -e bash -lc "cd /mnt/d/Documents/Projects/DefChain; FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full up -d --no-deps --force-recreate gateway-api web"
+wsl -e bash -lc "cd /mnt/d/Documents/Projects/DefChain; docker run --rm --add-host host.docker.internal:host-gateway -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:5173 -e EXPECTED_DEMO_MODE=full -v /mnt/d/Documents/Projects/DefChain:/work -w /work mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test"
 ```
 
 ## Last successful real Fabric transaction ID
@@ -69,12 +74,12 @@ The corresponding clean full-bootstrap query record is `query_smoke_99fb2d3795c1
 
 ## Tests
 
-- Passing: full TypeScript typecheck, production build, Prettier, ESLint, Bash syntax, 3 shared tests, 9 chaincode tests, 1 adapter test, 8 gateway tests, 3 web tests, and 2 security tests.
+- Passing: full TypeScript typecheck, production build, Prettier, ESLint, Bash syntax, 3 shared tests, 9 chaincode tests, 1 adapter test, 9 gateway tests, 6 web tests, and 2 security tests.
 - Passing against real Fabric: 2 integration tests covering the five-record lifecycle and negative invariants; the Playwright browser workflow; production SPA/API proxy routing; a 25-block decoded leakage scan; and persistence across a Fabric/container restart.
 - The clean destructive reset/rebootstrap passed from deleted ledger volumes through a new VALID Fabric commit and query-back.
 - Passing in full mode: four peers, three Raft orderers, four MSP lifecycle approvals, all three provider adapters, server-authoritative full configuration, production-routed Playwright workflow, and 27-block leakage scan.
 - Benchmark result: 10 Fabric-backed evaluations, 55.863 ms average, 54.067 ms p50, 60.873 ms p95. This is a single-client correctness-oriented latency sample, not a capacity claim.
-- Final regression after submission edits: typecheck, 24 workspace tests, 2 security tests, ESLint, Prettier, and the production build pass. One full-mode Playwright run passed the real workflow and produced exactly eight final screenshots.
+- Final navigation regression: all workspace typechecks and 28 workspace tests passed. The rebuilt production web/gateway containers passed one real full-mode Playwright workflow in 17.0 seconds, including Query ID display, separate Fabric transaction labelling, the RAB-only Request access action, and prefilled Disclosure fields.
 
 ## Blockers
 

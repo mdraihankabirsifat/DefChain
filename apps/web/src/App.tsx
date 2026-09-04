@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { login, request, type DemoUser } from "./api";
 import { partialScopeValidationMessage } from "./decision-scopes";
+import { queryIdValidationMessage } from "./query-id";
 
 type LedgerRecord = Record<string, unknown> & {
   recordType: string;
@@ -40,6 +41,10 @@ type DemoConfig = {
   mode: "lite" | "full";
   modeLabel: string;
   providers: string[];
+};
+type AccessDraft = {
+  queryId: string;
+  providerOrg: string;
 };
 const actors = [
   {
@@ -108,6 +113,7 @@ export function App() {
     modeLabel: "Lite Demo",
     providers: ["RABMSP"],
   });
+  const [accessDraft, setAccessDraft] = useState<AccessDraft>();
 
   useEffect(() => {
     request<DemoConfig>("/config")
@@ -198,8 +204,18 @@ export function App() {
         {view === "dashboard" && (
           <Dashboard user={user} available={health?.blockchain?.available} />
         )}
-        {view === "discovery" && <Discovery config={config} />}
-        {view === "disclosure" && <Disclosure />}
+        {view === "discovery" && (
+          <Discovery
+            config={config}
+            onRequestAccess={(draft) => {
+              setAccessDraft(draft);
+              localStorage.setItem("defchain_query_id", draft.queryId);
+              localStorage.setItem("defchain_provider_org", draft.providerOrg);
+              setView("disclosure");
+            }}
+          />
+        )}
+        {view === "disclosure" && <Disclosure accessDraft={accessDraft} />}
         {view === "inbox" && <ProviderInbox />}
         {view === "audit" && <Audit />}
         {view === "governance" && <Governance user={user} />}
@@ -433,7 +449,13 @@ function Metric({
   );
 }
 
-function Discovery({ config }: { config: DemoConfig }) {
+function Discovery({
+  config,
+  onRequestAccess,
+}: {
+  config: DemoConfig;
+  onRequestAccess: (draft: AccessDraft) => void;
+}) {
   const [cases, setCases] = useState<Array<{ case_id: string }>>([]);
   const [result, setResult] = useState<{
     query: LedgerRecord;
@@ -548,9 +570,18 @@ function Discovery({ config }: { config: DemoConfig }) {
           <Empty text="Results appear only after a committed QueryRequest." />
         ) : (
           <>
-            <div className="proof">
-              <span>QueryRequest committed</span>
-              <CopyButton value={result.query.txId} />
+            <div className="proof query-proof">
+              <div>
+                <strong>QueryRequest committed</strong>
+                <span>Query ID</span>
+                <code data-testid="discovery-query-id">
+                  {result.query.queryId}
+                </code>
+              </div>
+              <div>
+                <span>Fabric transaction ID</span>
+                <CopyButton value={result.query.txId} />
+              </div>
             </div>
             {result.partial && (
               <p className="partial-warning">
@@ -574,7 +605,23 @@ function Discovery({ config }: { config: DemoConfig }) {
                       {a?.result ?? "ATTESTATION FAILED · SAFE TO RETRY"}
                     </span>
                   </div>
-                  {a && <CopyButton value={a.txId} />}
+                  <div className="attestation-actions">
+                    {a?.result === "MATCH" && result.query.queryId && (
+                      <button
+                        className="request-access"
+                        aria-label={`Request access from ${providerResult.providerOrg.replace("MSP", "")}`}
+                        onClick={() =>
+                          onRequestAccess({
+                            queryId: result.query.queryId!,
+                            providerOrg: providerResult.providerOrg,
+                          })
+                        }
+                      >
+                        Request access
+                      </button>
+                    )}
+                    {a && <CopyButton value={a.txId} />}
+                  </div>
                 </div>
               );
             })}
@@ -586,7 +633,7 @@ function Discovery({ config }: { config: DemoConfig }) {
   );
 }
 
-function Disclosure() {
+function Disclosure({ accessDraft }: { accessDraft?: AccessDraft }) {
   const [mode, setMode] = useState<"request" | "receive">("request");
   const [output, setOutput] = useState<Record<string, unknown>>();
   const [error, setError] = useState("");
@@ -600,11 +647,18 @@ function Disclosure() {
     const f = new FormData(e.currentTarget);
     try {
       if (mode === "request") {
+        const queryId = String(f.get("queryId") ?? "").trim();
+        const validationMessage = queryIdValidationMessage(queryId);
+        if (validationMessage) {
+          setError(validationMessage);
+          return;
+        }
+
         const r = await request<{ access: LedgerRecord }>("/access-requests", {
           method: "POST",
           body: JSON.stringify({
-            queryId: f.get("queryId"),
-            providerOrg: "RABMSP",
+            queryId,
+            providerOrg: f.get("providerOrg"),
             requestedScopes: f.getAll("scope"),
             justification: f.get("justification"),
           }),
@@ -645,17 +699,30 @@ function Disclosure() {
             key={mode}
             name={mode === "request" ? "queryId" : "requestId"}
             defaultValue={
-              localStorage.getItem(
-                mode === "request"
-                  ? "defchain_query_id"
-                  : "defchain_request_id",
-              ) ?? ""
+              mode === "request"
+                ? (accessDraft?.queryId ??
+                  localStorage.getItem("defchain_query_id") ??
+                  "")
+                : (localStorage.getItem("defchain_request_id") ?? "")
             }
             required
           />
         </label>
         {mode === "request" && (
           <>
+            <label>
+              Matching provider organization
+              <input
+                name="providerOrg"
+                defaultValue={
+                  accessDraft?.providerOrg ??
+                  localStorage.getItem("defchain_provider_org") ??
+                  ""
+                }
+                readOnly
+                required
+              />
+            </label>
             <fieldset>
               <legend>Necessary scopes only</legend>
               {[

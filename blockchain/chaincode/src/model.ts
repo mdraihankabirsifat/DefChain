@@ -33,7 +33,7 @@ export const queryInputSchema = z
     purposeCode: purpose,
     targetOrganizations: z.array(organization).min(1).max(4),
     policyVersion: z.string().min(1).max(24),
-    createdByRole: z.literal("INVESTIGATOR"),
+    createdByRole: z.enum(["INVESTIGATOR", "PROVIDER_OFFICER"]),
   })
   .strict()
   .refine(
@@ -112,7 +112,7 @@ export interface QueryRequest extends Base {
   targetOrganizations: Organization[];
   policyVersion: string;
   status: "CREATED";
-  createdByRole: "INVESTIGATOR";
+  createdByRole: "INVESTIGATOR" | "PROVIDER_OFFICER";
 }
 export interface MatchAttestation extends Base {
   recordType: "MatchAttestation";

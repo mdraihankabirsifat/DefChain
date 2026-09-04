@@ -1,6 +1,6 @@
 # Test results
 
-Date: 2026-09-03 (Asia/Dhaka)  
+Date: 2026-09-04 (Asia/Dhaka)
 Host: Windows 11 with WSL2 Ubuntu; Docker Desktop 4.89.0, Engine 29.7.2, Compose 5.5.0; native WSL Node 22.23.2, npm 10.9.8, jq 1.8.1; Hyperledger Fabric 2.5.12.
 
 ## Actually run and passed
@@ -9,14 +9,14 @@ Host: Windows 11 with WSL2 Ubuntu; Docker Desktop 4.89.0, Engine 29.7.2, Compose
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm install` in WSL                                       | 400 packages audited after the final dependency update; 0 npm-reported vulnerabilities                                                         |
 | `npm run typecheck`                                        | All six TypeScript workspaces passed                                                                                                           |
-| `npm run build`                                            | All packages/services and the Vite production build passed; latest web output was 219.65 kB JS and 12.46 kB CSS before gzip                    |
-| `npm test`                                                 | 24 workspace tests passed: shared 3, chaincode 9, adapter 1, gateway 8, web 3                                                                  |
+| `npm run build`                                            | All packages/services and production containers built; latest web output was 221.05 kB JS and 13.02 kB CSS before gzip                         |
+| `npm test`                                                 | 28 workspace tests passed: shared 3, chaincode 9, adapter 1, gateway 9, web 6                                                                  |
 | `npm run test:security`                                    | 2 root security tests passed                                                                                                                   |
 | `npm run lint` / `npm run format:check`                    | ESLint and Prettier passed                                                                                                                     |
 | `bash -n` over shell scripts                               | All checked scripts passed syntax validation                                                                                                   |
 | `bash scripts/bootstrap.sh lite`                           | Police/RAB peers, one Raft orderer, channel, CCAAS chaincode, seed, VALID smoke commit, and query-back passed                                  |
 | `RUN_REAL_FABRIC_TESTS=true npm run test:integration`      | 2 real-Fabric tests passed: complete five-record lifecycle plus wrong-MSP/duplicate-key negatives                                              |
-| Playwright in `mcr.microsoft.com/playwright:v1.62.1-noble` | Earlier real lite/full workflows passed; the final full production-routed workflow passed once in 18.2 seconds and produced eight screenshots  |
+| Playwright in `mcr.microsoft.com/playwright:v1.62.1-noble` | Latest real full production-routed workflow passed in 17.0 seconds; Discovery RAB MATCH navigated to Disclosure with query/provider prefilled  |
 | `bash scripts/verify-production-routing.sh`                | SPA fallback and `/api` proxy behavior passed in both lite and full modes                                                                      |
 | `bash scripts/verify-ledger-leakage.sh`                    | Lite scan passed over 25 decoded blocks; final full scan passed over 27 decoded blocks with no configured identifier/token/payload/key markers |
 | `bash scripts/verify-persistence.sh`                       | Existing query returned the same transaction ID after all Fabric and CCAAS containers restarted                                                |
@@ -41,6 +41,7 @@ Each smoke transaction was reported VALID by the peer and then read back from Fa
 - Persistence originally selected the first installed package when historical packages existed. It now selects the package ID approved in the channel definition.
 - Network shutdown originally left the profile-gated CCAAS container attached. It now brings down full and chaincode profiles before removing volumes, and the clean full reset passed afterward.
 - Full audit contains one MatchAttestation per provider. The browser assertion was corrected to handle the expected multiple records.
+- Discovery formerly displayed only the Fabric transaction ID and Disclosure hardcoded RAB. The UI now labels both IDs, exposes Request access only for MATCH, carries the matching provider, and rejects transaction IDs at both client and API boundaries.
 
 ## Final screenshot evidence
 
@@ -55,7 +56,7 @@ The final full-mode Playwright run produced exactly these eight screenshots unde
 7. `07-five-stage-audit-timeline.png`
 8. `08-abuse-control-or-fail-closed.png`
 
-All eight were visually inspected for legibility, correct full/Fabric-connected state, the requested workflow stage, synthetic identifiers, and absence of raw secrets or provider payloads. The previous three screenshots were removed only after this inspection.
+All eight were visually inspected for legibility, correct full/Fabric-connected state, the requested workflow stage, synthetic identifiers, and absence of raw secrets or provider payloads. After the navigation fix regenerated the set, the changed Discovery and Disclosure evidence was re-inspected to confirm the separate IDs, RAB-only action, and prefilled application Query ID/provider organization.
 
 ## Submission artifact boundary
 

@@ -154,6 +154,25 @@ describe("gateway API controls and query outcomes", () => {
     expect(JSON.stringify(response.body)).not.toContain("provider unavailable");
   });
 
+  it("rejects a Fabric transaction ID where an application Query ID is required", async () => {
+    const evaluate = vi.spyOn(dependencies.fabric, "evaluate");
+    const response = await api
+      .post("/api/v1/access-requests")
+      .set("authorization", `Bearer ${policeToken}`)
+      .send({
+        queryId: "a".repeat(64),
+        providerOrg: "RABMSP",
+        requestedScopes: ["IDENTITY_CONFIRMATION"],
+        justification: "Synthetic active-case verification.",
+      });
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_QUERY_ID");
+    expect(response.body.error.message).toContain(
+      "not the 64-character Fabric transaction ID",
+    );
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+
   it("reports Fabric health honestly without a fake ledger", async () => {
     vi.spyOn(dependencies.fabric, "health").mockResolvedValue({
       available: false,

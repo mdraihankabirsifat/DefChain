@@ -65,7 +65,7 @@ export interface QueryRequest extends LedgerBase {
   targetOrganizations: Organization[];
   policyVersion: string;
   status: "CREATED";
-  createdByRole: "INVESTIGATOR";
+  createdByRole: "INVESTIGATOR" | "PROVIDER_OFFICER";
 }
 
 export interface MatchAttestation extends LedgerBase {

@@ -41,12 +41,21 @@ test(`completes the real ${mode} workflow through the UI`, async ({ page }) => {
     localStorage.getItem("defchain_query_id"),
   );
   expect(queryId).toMatch(/^query_[a-f0-9]{32}$/);
+  await expect(page.getByTestId("discovery-query-id")).toHaveText(queryId!);
+  await expect(
+    page.getByText("Fabric transaction ID", { exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: `${screenshotDirectory}/03-provider-discovery-results.png`,
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "Disclosure" }).click();
+  await expect(
+    page.getByRole("button", { name: /Request access from/ }),
+  ).toHaveCount(1);
+  await page.getByRole("button", { name: "Request access from RAB" }).click();
+  await expect(page.locator('input[name="queryId"]')).toHaveValue(queryId!);
+  await expect(page.locator('input[name="providerOrg"]')).toHaveValue("RABMSP");
   await page.getByRole("button", { name: /Commit AccessRequest/ }).click();
   await expect(page.locator("pre.output")).toContainText("AccessRequest", {
     timeout: 60_000,

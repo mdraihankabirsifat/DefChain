@@ -454,6 +454,26 @@ legend {
   border-radius: 8px;
   font-size: 12px;
 }
+.query-proof {
+  align-items: center;
+  gap: 20px;
+}
+.query-proof > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.query-proof > div:last-child {
+  align-items: flex-end;
+  text-align: right;
+}
+.query-proof code {
+  font-family: monospace;
+  font-size: 11px;
+  color: #d7fffb;
+  overflow-wrap: anywhere;
+}
 .proof span,
 .verification-summary span {
   display: flex;
@@ -509,6 +529,25 @@ legend {
 .attestation span {
   font-size: 11px;
   color: var(--muted);
+}
+.attestation-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.request-access {
+  border: 1px solid #287b78;
+  background: #123e42;
+  color: #aaf5ed;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.request-access:hover {
+  filter: brightness(1.15);
 }
 .result-dot {
   width: 9px;

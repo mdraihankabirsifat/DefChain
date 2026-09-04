@@ -444,6 +444,20 @@ app.post(
   role("INVESTIGATOR"),
   async (req: AuthRequest, res, next) => {
     try {
+      const suppliedQueryId = String(req.body?.queryId ?? "").trim();
+      if (/^[a-f0-9]{64}$/i.test(suppliedQueryId))
+        throw new DefChainError(
+          "INVALID_QUERY_ID",
+          "Use the application Query ID beginning with query_, not the 64-character Fabric transaction ID.",
+          400,
+        );
+      if (!/^query_[a-f0-9]{32}$/.test(suppliedQueryId))
+        throw new DefChainError(
+          "INVALID_QUERY_ID",
+          "Query ID must begin with query_ and contain the application query identifier.",
+          400,
+        );
+
       const suppliedScopes = Array.isArray(req.body?.requestedScopes)
         ? req.body.requestedScopes
         : [];
