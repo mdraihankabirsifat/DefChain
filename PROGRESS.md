@@ -13,6 +13,7 @@ Last updated: 2026-09-04 (Asia/Dhaka)
 - Eight final full-mode screenshots were produced by one successful real-Fabric Playwright run and visually inspected before the obsolete three-image set was removed.
 - Handoff state: the software prototype is complete and the full Fabric/production stacks are running at `http://localhost:5173`. Disclosure now accepts the application Query ID, restores prior organization-owned Query IDs from Fabric, and resolves the approved request internally. RAB, BGB, and Customs can each query either other provider and receive incoming requests in their own inbox. The external submission package remains incomplete because the whitepaper copy, corrected poster, pitch deck, and 600-second MP4 were not found locally.
 - Chaincode sequence 2 is committed with approvals from PoliceMSP, RABMSP, BGBMSP, and CustomsMSP; the lifecycle upgrade preserved existing ledger history.
+- After a Docker Desktop restart stopped all containers, the existing full Fabric, chaincode, and production app stacks were restarted without resetting volumes. Direct checks returned HTTP 200 for the API and frontend, reported `blockchain.available: true` in full mode, and confirmed production SPA/API routing behavior.
 
 ## Completed milestones
 
@@ -71,6 +72,12 @@ wsl -e bash -lc 'cd /mnt/d/Documents/Projects/DefChain; FABRIC_NETWORK_MODE=full
 wsl -e bash -lc 'cd /mnt/d/Documents/Projects/DefChain; docker run --rm --add-host host.docker.internal:host-gateway -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:5173 -e EXPECTED_DEMO_MODE=full -v /mnt/d/Documents/Projects/DefChain:/work -w /work mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test'
 wsl -e bash -lc 'cd /mnt/d/Documents/Projects/DefChain; FABRIC_NETWORK_MODE=full bash scripts/verify-production-routing.sh; FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full up -d'
 wsl -e bash -lc 'cd /mnt/d/Documents/Projects/DefChain; FABRIC_NETWORK_MODE=full bash scripts/verify-ledger-leakage.sh'
+wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash blockchain/network/network.sh up full && docker start defchain-chaincode && FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full up -d'
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:4000/api/v1/health' -TimeoutSec 15
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/' -TimeoutSec 15
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/api/v1/config' -TimeoutSec 15
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/nonexistent-spa-route' -TimeoutSec 15
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/api/v1/does-not-exist' -TimeoutSec 15
 ```
 
 ## Last successful real Fabric transaction ID
