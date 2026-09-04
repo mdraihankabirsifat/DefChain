@@ -14,6 +14,7 @@ Last updated: 2026-09-04 (Asia/Dhaka)
 - Handoff state: the software prototype is complete and the full Fabric/production stacks are running at `http://localhost:5173`. Disclosure now accepts the application Query ID, restores prior organization-owned Query IDs from Fabric, and resolves the approved request internally. RAB, BGB, and Customs can each query either other provider and receive incoming requests in their own inbox. The external submission package remains incomplete because the whitepaper copy, corrected poster, pitch deck, and 600-second MP4 were not found locally.
 - Chaincode sequence 2 is committed with approvals from PoliceMSP, RABMSP, BGBMSP, and CustomsMSP; the lifecycle upgrade preserved existing ledger history.
 - After a Docker Desktop restart stopped all containers, the existing full Fabric, chaincode, and production app stacks were restarted without resetting volumes. Direct checks returned HTTP 200 for the API and frontend, reported `blockchain.available: true` in full mode, and confirmed production SPA/API routing behavior.
+- The frontend now submits the exact controlled Discovery provider selection, presents newest-first Fabric query history with local timestamps in a dedicated Disclosure History tab, routes history rows according to workflow state, and uses one global success/error clipboard toast for application and ledger IDs.
 
 ## Completed milestones
 
@@ -30,6 +31,7 @@ Last updated: 2026-09-04 (Asia/Dhaka)
 - [x] Run final static, unit, security, integration, browser, production-routing, leakage, persistence, reset, and benchmark checks.
 - [x] Implement the last minimal-submission prompt: selectable provider PARTIAL scopes, corrected API documentation, eight inspected screenshots, submission checklist, and demo credential handoff.
 - [x] Fix and verify Discovery-to-Disclosure navigation: `TEST-NID-0001` produces a RAB MATCH whose Request access action opens Disclosure with the application Query ID and RAB organization prefilled.
+- [x] Verify the focused frontend-improvements workflow against real full-mode Fabric: RAB-only query, newest-first timed History entry, copied toast, history-driven access request, RAB approval, Police disclosure, and refreshed History.
 
 ## Exact commands last run
 
@@ -75,6 +77,11 @@ wsl -e bash -lc 'cd /mnt/d/Documents/Projects/DefChain; FABRIC_NETWORK_MODE=full
 wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/Documents/Projects/DefChain && bash blockchain/network/network.sh up full && docker start defchain-chaincode && FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full up -d'
 Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:4000/api/v1/health' -TimeoutSec 15
 Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/' -TimeoutSec 15
+wsl.exe -d Ubuntu -- bash -lc 'export PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd /mnt/d/Documents/Projects/DefChain && npm run test -w @defchain/web'
+wsl.exe -d Ubuntu -- bash -lc 'export PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd /mnt/d/Documents/Projects/DefChain && npm run build'
+wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/Documents/Projects/DefChain && FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full build web && FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full up -d --no-deps --force-recreate web'
+wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/Documents/Projects/DefChain && docker run --rm --add-host host.docker.internal:host-gateway -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:5173 -e EXPECTED_DEMO_MODE=full -v /mnt/d/Documents/Projects/DefChain:/work -w /work mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test tests/e2e/frontend-improvements.spec.ts'
+wsl.exe -d Ubuntu -- bash -lc 'export PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd /mnt/d/Documents/Projects/DefChain && npm run lint && npm run format:check'
 Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/api/v1/config' -TimeoutSec 15
 Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/nonexistent-spa-route' -TimeoutSec 15
 Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/api/v1/does-not-exist' -TimeoutSec 15
@@ -94,6 +101,7 @@ The corresponding clean full-bootstrap query record is `query_smoke_99fb2d3795c1
 - Passing in full mode: four peers, three Raft orderers, four MSP lifecycle approvals, all three provider adapters, server-authoritative full configuration, two production-routed Playwright workflows, and the latest 85-block leakage scan.
 - Benchmark result: 10 Fabric-backed evaluations, 55.863 ms average, 54.067 ms p50, 60.873 ms p95. This is a single-client correctness-oriented latency sample, not a capacity claim.
 - Final query-ID and cross-provider regression: all workspace typechecks and 32 workspace tests passed. The rebuilt production web/gateway containers passed 2 real full-mode Playwright tests in 52.4 seconds, including query-history restoration, query-ID disclosure, the five-record workflow, and each provider acting as both requester and receiver.
+- Frontend improvements: 8 focused web tests passed, the full workspace production build passed, ESLint and the repository-wide Prettier check passed, and the focused real-Fabric Playwright workflow passed in 20.9 seconds. The full-mode network was not reset and remains running. The test used the existing auditor-only demo counter reset because the persisted Police account had already reached its 8/8 query budget; Fabric and agency data were not reset.
 
 ## Blockers
 
