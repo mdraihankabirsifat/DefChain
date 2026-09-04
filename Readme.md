@@ -1,28 +1,22 @@
+<div align="center">
+
 # DefChain
 
-> **Share the match, not the database.**
+### Share the match, not the database.
 
-DefChain is a privacy-conscious, permissioned inter-agency discovery and disclosure workflow prototype for the **Blockchain Olympiad Bangladesh 2026**.
+Privacy-conscious, permissioned inter-agency discovery and provider-controlled disclosure, backed by Hyperledger Fabric.
 
-Each simulated agency retains its own synthetic database. Hyperledger Fabric records jointly governed workflow facts—queries, match attestations, access requests, authorization decisions, and disclosure receipts—while raw identifiers and provider payloads remain off the common ledger.
+[Quick start](#quick-start) · [Guided demo](#guided-demo) · [Architecture](#architecture) · [Security](#security-model) · [Verification](#verified-project-status)
 
-DefChain demonstrates how authorized agencies can discover that another agency holds a relevant record **without sharing complete databases**, then request only the minimum required information through a provider-controlled and auditable workflow.
+</div>
 
-> **Competition prototype:** All agencies, users, cases, identities, and intelligence records used by the demo are synthetic or simulated. DefChain does not claim government access, partnership, production readiness, factual correctness of intelligence, or perfect privacy.
+![DefChain full-mode dashboard connected to Hyperledger Fabric](assets/screenshots/02-fabric-connected-overview.png)
 
----
+## Overview
 
-## Core idea
+DefChain is a working software prototype created for the **Blockchain Olympiad Bangladesh 2026**. It demonstrates how an authorized organization can discover whether another organization holds a relevant record without pooling agency databases or publishing sensitive records to a shared ledger.
 
-DefChain separates three responsibilities:
-
-1. **Discover** — privacy-conscious protected matching determines whether another agency holds a relevant record.
-2. **Authorize** — the data-owning agency can approve, partially approve, or deny a scoped disclosure request.
-3. **Prove** — Hyperledger Fabric records the jointly governed authorization trail.
-
-The blockchain records **decisions about intelligence — not the intelligence itself**.
-
-### Five-stage workflow
+Each simulated agency keeps its own SQLite database and makes its own disclosure decision. Hyperledger Fabric records the shared workflow facts needed for governance and auditability:
 
 ```text
 QueryRequest
@@ -36,565 +30,406 @@ AuthorizationDecision
 DisclosureReceipt
 ```
 
-A `MATCH` is only a discovery signal. It is **not proof of guilt, factual correctness, or automatic entitlement to disclosure**.
+The central principle is simple: **the blockchain records decisions about intelligence, not the intelligence itself.**
 
----
+> [!IMPORTANT]
+> DefChain is a competition prototype using synthetic identities, cases, users, and provider records. It does not claim government access, institutional partnership, production readiness, or that a match proves guilt or factual correctness.
+
+## What the final prototype demonstrates
+
+- Real Hyperledger Fabric 2.5.12 integration with no mock-ledger fallback.
+- Four member organizations: PoliceMSP, RABMSP, BGBMSP, and CustomsMSP.
+- Four peers and a three-node etcdraft/Raft ordering service in full mode.
+- TypeScript chaincode deployed as an external CCAAS service.
+- Independent provider adapters and separate SQLite databases for RAB, BGB, and Customs.
+- Case-bound, purpose-limited, budget-controlled protected discovery.
+- Selectable query targets: any non-empty combination of available providers.
+- Provider-owned `APPROVE`, `PARTIAL`, and `DENY` decisions.
+- AES-256-GCM disclosure, SHA-256 integrity evidence, and Ed25519 signatures.
+- Fabric-backed query history with local timestamps and workflow-aware navigation.
+- Clear separation of Query IDs, Request IDs, and Fabric transaction IDs.
+- Role-aware React interface, provider inboxes, global copy feedback, and audit timeline.
+- Fail-closed behavior when Fabric is unavailable.
+- Decoded-block privacy leakage checks and ledger persistence verification.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI[React / Vite UI] --> API[Gateway API<br/>JWT · cases · budgets · routing]
+
+  API -->|Protected token<br/>signed internal request| RAB[RAB adapter]
+  API -->|Protected token<br/>signed internal request| BGB[BGB adapter]
+  API -->|Protected token<br/>signed internal request| CUS[Customs adapter]
+
+  RAB --> RDB[(RAB SQLite)]
+  BGB --> BDB[(BGB SQLite)]
+  CUS --> CDB[(Customs SQLite)]
+
+  API -->|PoliceMSP identity| FABRIC[defchain-channel<br/>DefChain chaincode]
+  RAB -->|RABMSP identity| FABRIC
+  BGB -->|BGBMSP identity| FABRIC
+  CUS -->|CustomsMSP identity| FABRIC
+
+  FABRIC --> P1[Police peer]
+  FABRIC --> P2[RAB peer]
+  FABRIC --> P3[BGB peer]
+  FABRIC --> P4[Customs peer]
+```
+
+The gateway coordinates the user journey, but it does not open provider databases. Each provider adapter receives only its own organization configuration, database, Fabric identity, and signing material. In Docker mode, adapter ports remain on an internal application network.
+
+### Full Fabric topology
+
+| Layer         | Final configuration                                               |
+| ------------- | ----------------------------------------------------------------- |
+| Organizations | PoliceMSP, RABMSP, BGBMSP, CustomsMSP                             |
+| Peers         | One peer per organization                                         |
+| Ordering      | Three etcdraft/Raft orderers                                      |
+| Channel       | `defchain-channel`                                                |
+| Chaincode     | `defchain`, TypeScript, external CCAAS service                    |
+| Identities    | Organization-specific X.509/MSP identities with TLS               |
+| Endorsement   | Member endorsement plus chaincode-enforced provider MSP ownership |
+
+Raft provides crash-fault-tolerant ordering while a majority is available. The prototype does not claim Byzantine fault tolerance.
+
+## Governed workflow
+
+| Stage | Ledger record           | Created by             | What it proves                                                         |
+| ----- | ----------------------- | ---------------------- | ---------------------------------------------------------------------- |
+| 1     | `QueryRequest`          | Requester organization | An authorized, purpose-bound query targeted specific providers         |
+| 2     | `MatchAttestation`      | Target provider        | The provider returned `MATCH` or `NO_MATCH` using its protected lookup |
+| 3     | `AccessRequest`         | Requester organization | The requester asked for explicit, minimal disclosure scopes            |
+| 4     | `AuthorizationDecision` | Data-owning provider   | The provider approved, partially approved, or denied the request       |
+| 5     | `DisclosureReceipt`     | Data-owning provider   | An approved off-chain disclosure occurred with integrity evidence      |
+
+### Identifier types
+
+DefChain deliberately distinguishes three identifiers:
+
+| Identifier            | Example shape                 | Purpose                                                                           |
+| --------------------- | ----------------------------- | --------------------------------------------------------------------------------- |
+| Query ID              | `query_...`                   | Application workflow identifier used in Discovery, Disclosure, History, and Audit |
+| Request ID            | `request_...`                 | Identifier for a scoped access request handled by a provider                      |
+| Fabric transaction ID | 64-character hexadecimal hash | Evidence that an individual ledger transaction was committed                      |
+
+A Fabric transaction ID is not accepted where the application requires a Query ID.
+
+## Privacy boundary
+
+| Written to the shared Fabric ledger  | Kept off-chain                             |
+| ------------------------------------ | ------------------------------------------ |
+| Opaque case reference                | Raw identifier                             |
+| Purpose code                         | HMAC token and matching key                |
+| Requester and provider organizations | Provider source record                     |
+| `MATCH` / `NO_MATCH` result          | Free-text justification                    |
+| Requested and approved scopes        | Disclosure payload                         |
+| Authorization decision               | AES encryption key                         |
+| Payload hash and signature evidence  | Ed25519 private key                        |
+| Ledger timestamp and transaction ID  | Passwords, JWTs, and authorization headers |
+
+The MVP protects exact-match discovery with an HMAC-SHA-256 token derived from a canonical synthetic identifier and an epoch-bound key. The token is sent only to provider adapters and is never written to Fabric.
+
+HMAC matching is intentionally presented as an MVP mechanism. Equality can remain observable within an epoch, and shared-key compromise can enable enumeration. Production research directions include VOPRF/OPRF, Private Set Intersection, stronger compartmentalization, and HSM/KMS-backed key custody.
 
 ## Quick start
 
-### Requirements
+### Prerequisites
 
-The supported development environment is:
+Use the supported WSL2 environment for Fabric commands:
 
-- Windows 11
-- WSL2 Ubuntu
-- Docker Desktop with WSL integration enabled
-- Node.js 22
-- npm 10
-- Hyperledger Fabric 2.5.x tools
+- Windows 11 with WSL2 Ubuntu
+- Docker Desktop with Ubuntu WSL integration enabled
+- Node.js 20 or 22 and npm 10+
+- Git, Bash, curl, jq, and OpenSSL
+- Docker Compose v2
 
-### First-time setup / clean full bootstrap
+From Windows PowerShell, check the host first:
+
+```powershell
+npm.cmd run preflight
+```
+
+Then open the repository in WSL Ubuntu.
+
+### Full first-time bootstrap
 
 ```bash
 cp .env.example .env
 npm install
 npm run bootstrap
-```
-
-The full bootstrap creates the competition topology, including:
-
-- PoliceMSP
-- RABMSP
-- BGBMSP
-- CustomsMSP
-- 4 Fabric peers
-- 3 Raft orderers
-- `defchain-channel`
-- `defchain` TypeScript chaincode
-- synthetic provider databases
-- demonstration identities and cryptographic material
-
-After bootstrap completes:
-
-```bash
 npm run dev:full
 ```
+
+Bootstrap downloads the pinned Fabric tools, creates the network and channel, deploys chaincode, creates local demonstration identities, seeds the independent synthetic databases, and verifies a real smoke transaction by querying it back.
 
 Open:
 
-- Demo UI: http://localhost:5173
-- API/Fabric health: http://localhost:4000/api/v1/health
+- Web interface: <http://localhost:5173>
+- API and Fabric health: <http://localhost:4000/api/v1/health>
 
-### Normal startup after the project has already been bootstrapped
+The health response must report Fabric as available before ledger-changing actions are enabled.
 
-Normally you only need:
+### Returning startup
+
+If the project is already bootstrapped:
 
 ```bash
+npm run network:up
 npm run dev:full
 ```
 
-Keep the terminal running while using the application.
+For the production-style containerized frontend and API after the Fabric network is available:
 
----
-
-## Prototype screenshots
-
-The following screenshots show the final full-mode competition workflow running against the DefChain backend and Hyperledger Fabric network.
-
-### 1. Full demo login
-
-Role-aware entry point for the simulated agencies and independent auditor.
-
-![DefChain full demo login](assets/screenshots/01-login-full-demo.png)
-
----
-
-### 2. Fabric-connected overview
-
-The dashboard verifies that the application is connected to the real Hyperledger Fabric network.
-
-![Fabric connected overview](assets/screenshots/02-fabric-connected-overview.png)
-
----
-
-### 3. Privacy-conscious provider discovery
-
-Police performs a case-bound protected query. In the synthetic demonstration, **RAB returns `MATCH`**, while **BGB and Customs return `NO_MATCH`** without exposing their underlying records.
-
-![Provider discovery results](assets/screenshots/03-provider-discovery-results.png)
-
----
-
-### 4. Scoped access request
-
-A match does not automatically expose the provider record. The requester asks only for explicitly required disclosure scopes.
-The MATCH-only **Request access** action carries the application `query_...` ID and matching provider into the Disclosure form automatically.
-The Disclosure page keeps a Fabric-backed **Previous Query IDs** list and resolves approved disclosures by Query ID, so request IDs never need to be copied manually.
-
-![Scoped access request](assets/screenshots/04-scoped-access-request.png)
-
----
-
-### 5. Provider authorization decision
-
-The provider remains in control of its data and can **APPROVE**, **PARTIAL**, or **DENY** the requested disclosure.
-
-![Provider authorization decision](assets/screenshots/05-provider-authorization-decision.png)
-
----
-
-### 6. Verified disclosure and blockchain receipt
-
-Only approved fields are disclosed off-chain. The recipient verifies the protected disclosure and the system records a cryptographic receipt with a Fabric transaction ID.
-
-![Verified disclosure receipt](assets/screenshots/06-verified-disclosure-receipt.png)
-
----
-
-### 7. Five-stage immutable audit timeline
-
-The audit view reconstructs the complete governed workflow:
-
-`QueryRequest → MatchAttestation → AccessRequest → AuthorizationDecision → DisclosureReceipt`
-
-![Five-stage audit timeline](assets/screenshots/07-five-stage-audit-timeline.png)
-
----
-
-### 8. Abuse control and fail-closed behavior
-
-Unauthorized or invalid actions—such as missing case authority, revoked users, or exhausted query budgets—are blocked rather than silently bypassing policy.
-
-![Abuse control and fail-closed state](assets/screenshots/08-abuse-control-or-fail-closed.png)
-
----
-
-## Architecture
-
-```text
-                       ┌─────────────────────┐
-                       │    React / Vite     │
-                       │   Role-aware UI     │
-                       └──────────┬──────────┘
-                                  │
-                                  ▼
-                       ┌─────────────────────┐
-                       │   Gateway API       │
-                       │ Auth • Cases        │
-                       │ Policy • Routing    │
-                       └──────┬───────┬──────┘
-                              │       │
-              ┌───────────────┘       └───────────────┐
-              ▼                                       ▼
-       Agency adapters                         Hyperledger Fabric
-   RAB • BGB • Customs                    Shared governance layer
-              │
-              ▼
-      Independent local DBs
+```bash
+FABRIC_NETWORK_MODE=full docker compose \
+  -f docker-compose.app.yml \
+  --profile full up -d --build
 ```
 
-### Full competition topology
+### Lite development mode
 
-```text
-PoliceMSP  ── peer0
-RABMSP     ── peer0
-BGBMSP     ── peer0
-CustomsMSP ── peer0
-
-              │
-              ▼
-
-      defchain-channel
-              │
-              ▼
-
-    3-node Raft ordering service
+```bash
+npm run bootstrap:lite
+npm run dev
 ```
 
-The full prototype uses:
+Lite mode runs PoliceMSP, RABMSP, two peers, and one orderer. The default `npm run dev` intentionally uses lite mode; use `npm run dev:full` for all three provider organizations.
 
-- **4 organization peers**
-- **3 etcdraft/Raft orderers**
-- **1 consortium channel:** `defchain-channel`
-- **TypeScript CCAAS chaincode:** `defchain`
-- organization-specific X.509/MSP identities
+> [!CAUTION]
+> `npm run reset` removes DefChain Fabric volumes and ignored runtime data before bootstrapping a known state. Use it only when a clean reset is intentional. Normal startup does not require it.
 
-Raft provides crash-fault-tolerant ordering under majority availability; the prototype does **not** claim Byzantine fault tolerance.
+For detailed environment and recovery instructions, see [docs/QUICKSTART.md](docs/QUICKSTART.md) and [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
----
+## Guided demo
 
-## Repository map
+The login page provides role-aware demonstration actors. The local judge handoff is documented in [submission/DefChain_Demo_Credential.txt](submission/DefChain_Demo_Credential.txt); credentials are demonstration-only and must never be reused outside this local prototype.
 
-- `apps/web` — React/Vite role-aware competition dashboard.
-- `services/gateway-api` — authentication, case/query orchestration, policy enforcement, Fabric Gateway, and audit API.
-- `services/agency-adapter` — reusable provider-side matching, authorization, disclosure, encryption, and signing service.
-- `blockchain/chaincode` — TypeScript Fabric contract implementing the five workflow ledger object types.
-- `blockchain/network` — lite/full Hyperledger Fabric topology and lifecycle scripts.
-- `packages/fabric-client` — application-facing Hyperledger Fabric client.
-- `packages/shared` — shared enums, Zod schemas, DTOs, and cryptographic helpers.
-- `data/seeds` — explicitly synthetic deterministic fixtures.
-- `assets/screenshots` — final prototype demonstration screenshots.
-- `docs` — architecture, governance, threat model, API, tests, demo, and judging evidence.
-- `tests` — workspace, security, integration, browser, and production verification tests.
+### 1. Create a protected query
 
-Full startup, demo accounts, verified topology, test commands, limitations, and troubleshooting are documented in [docs/QUICKSTART.md](docs/QUICKSTART.md).
+Sign in as the Police investigator and open **Discovery**.
 
-Current implementation status and blockers are documented in [PROGRESS.md](PROGRESS.md).
+| Field                | Value                  |
+| -------------------- | ---------------------- |
+| Active case          | `P-2026-014`           |
+| Synthetic identifier | `TEST-NID-0001`        |
+| Purpose              | `ACTIVE_INVESTIGATION` |
+| Target organization  | Select only RAB        |
 
----
+Expected result: RAB returns `MATCH`. Only the selected organization is submitted to the query API and shown in the provider results.
 
-## Demo accounts
+### 2. Use Fabric-backed History
 
-| Actor                 | Username              | Password           | Organization / role      |
-| --------------------- | --------------------- | ------------------ | ------------------------ |
-| Police investigator   | `police.investigator` | `PoliceDemo!2026`  | PoliceMSP / investigator |
-| RAB officer           | `rab.officer`         | `RabDemo!2026`     | RABMSP / provider        |
-| BGB officer           | `bgb.officer`         | `BgbDemo!2026`     | BGBMSP / provider        |
-| Customs officer       | `customs.officer`     | `CustomsDemo!2026` | CustomsMSP / provider    |
-| Independent auditor   | `auditor`             | `AuditDemo!2026`   | Read-only auditor        |
-| Revoked test user     | `revoked.user`        | `RevokedDemo!2026` | Disabled                 |
-| Exhausted-budget user | `budget.exhausted`    | `BudgetDemo!2026`  | Zero query budget        |
+Open **Disclosure → History**. The new Query ID appears first with:
 
-RAB, BGB, and Customs officers have both requester and provider capabilities: each can create a query against either of the other provider organizations and each receives incoming AccessRequests in its own provider inbox. Their synthetic requester cases are:
+- its original Fabric ledger timestamp formatted in local time;
+- the selected target providers;
+- a copy action with global success/error feedback.
 
-| Requester organization | Active synthetic case    |
-| ---------------------- | ------------------------ |
-| RABMSP                 | `TEST-CASE-RAB-0001`     |
-| BGBMSP                 | `TEST-CASE-BGB-0001`     |
-| CustomsMSP             | `TEST-CASE-CUSTOMS-0001` |
+Select the history row. Because access has not yet been requested, DefChain opens **Request scoped access** and prefills the correct `query_...` value and matching provider.
 
-An organization cannot target itself. Query history is read from Fabric and is filtered to the authenticated requester organization.
+### 3. Request minimum scopes
 
-> These credentials are local demonstration fixtures and are not production credentials.
-
----
-
-## Guided demonstration
-
-### 1. Protected discovery
-
-Log in as:
-
-```text
-police.investigator
-```
-
-Use:
-
-```text
-Case:       P-2026-014
-Identifier: TEST-NID-0001
-Purpose:    ACTIVE_INVESTIGATION
-```
-
-Target:
-
-```text
-RAB
-BGB
-Customs
-```
-
-Expected synthetic result:
-
-```text
-RAB       → MATCH
-BGB       → NO_MATCH
-Customs   → NO_MATCH
-```
-
-Each provider attestation is associated with a real Fabric transaction.
-
----
-
-### 2. Scoped disclosure request
-
-After the RAB match, request:
+Request only the fields required for the synthetic investigation, such as:
 
 ```text
 IDENTITY_CONFIRMATION
 CASE_REFERENCE
 ```
 
-No provider dossier is automatically exposed.
+The provider record is not exposed at this stage.
 
----
+### 4. Make the provider decision
 
-### 3. Provider decision
+Switch to the RAB provider officer and open **Provider inbox**. RAB can:
 
-Switch to:
+- approve every requested scope;
+- partially approve a non-empty proper subset; or
+- deny the request.
 
-```text
-rab.officer
-```
+Provider identity and workflow-transition checks are enforced by chaincode, not only by the interface.
 
-The RAB provider can choose:
+### 5. Receive and verify disclosure
 
-```text
-APPROVE
-PARTIAL
-DENY
-```
+Return to Police and select the query from **Disclosure → History**. An approved decision routes the row to **Receive approved disclosure** automatically.
 
-A partial authorization can demonstrate that provider control applies at the field/scope level.
+The provider encrypts the authorized fields off-chain. Police verifies the encrypted result and signature, and Fabric receives a `DisclosureReceipt`. History remains sourced from Fabric and refreshes after each workflow action.
 
----
+### 6. Inspect the audit timeline
 
-### 4. Verified disclosure
+Open **Audit timeline** with the same Query ID to reconstruct the five immutable ledger records and their Fabric transaction evidence.
 
-Return to Police, open Disclosure, and select the original `query_...` value from **Previous Query IDs**. The page uses that Query ID to locate the approved request and receive only the authorized fields.
+## Final interface
 
-A 64-character Fabric transaction ID is evidence for a ledger commit, but it is not accepted as an application Query ID.
+<table>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/01-login-full-demo.png" alt="Role-aware DefChain login" /></td>
+    <td width="50%"><img src="assets/screenshots/03-provider-discovery-results.png" alt="Protected provider discovery results" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Role-aware full-mode entry</strong></td>
+    <td align="center"><strong>Protected provider discovery</strong></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/04-scoped-access-request.png" alt="Scoped access request" /></td>
+    <td><img src="assets/screenshots/05-provider-authorization-decision.png" alt="Provider authorization decision" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Minimum-necessary access request</strong></td>
+    <td align="center"><strong>Provider-controlled decision</strong></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/06-verified-disclosure-receipt.png" alt="Verified disclosure receipt" /></td>
+    <td><img src="assets/screenshots/07-five-stage-audit-timeline.png" alt="Five-stage Fabric audit timeline" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Verified off-chain disclosure</strong></td>
+    <td align="center"><strong>Immutable workflow evidence</strong></td>
+  </tr>
+</table>
 
-The disclosure workflow uses:
+The complete eight-image evidence set, including Fabric connectivity and fail-closed abuse controls, is in [assets/screenshots](assets/screenshots).
 
-- AES-256-GCM authenticated encryption
-- SHA-256 payload hashing
-- Ed25519 signatures
-- Fabric-backed disclosure receipt
+## Security model
 
-The disclosure payload itself remains off the common blockchain ledger.
+Implemented controls include:
 
----
+- organization-backed X.509/MSP identities and TLS;
+- JWT authentication plus active-user checks;
+- role and organization authorization;
+- active-case and purpose validation before ledger writes;
+- per-user query budgets;
+- requester self-target prevention;
+- provider MSP ownership checks in chaincode;
+- immutable record keys and legal workflow-transition enforcement;
+- non-empty proper-subset enforcement for `PARTIAL` decisions;
+- HMAC-SHA-256 protected exact matching;
+- replay-resistant signed adapter requests;
+- AES-256-GCM encryption, SHA-256 hashing, and Ed25519 signatures;
+- decoded Fabric block scanning for configured privacy markers;
+- fail-closed writes when Fabric is unavailable.
 
-### 5. Audit trail
+There is no in-memory, SQLite-ledger, or mock-blockchain fallback.
 
-Open the audit timeline to inspect:
-
-```text
-QueryRequest
-MatchAttestation
-AccessRequest
-AuthorizationDecision
-DisclosureReceipt
-```
-
-The audit view exposes organization, time, workflow state, and transaction evidence without exposing raw intelligence.
-
----
-
-### 6. Abuse-control demonstration
-
-The prototype also demonstrates rejected actions such as:
-
-- missing active case
-- unauthorized role
-- revoked user
-- exhausted query budget
-- invalid workflow transition
-- Fabric unavailable
-
-DefChain fails closed for ledger-changing operations rather than silently falling back to a mock ledger.
-
----
-
-## Privacy-preserving discovery
-
-The MVP uses an HMAC-SHA-256 protected exact-match token:
-
-```text
-token = HMAC-SHA-256(
-    epoch_key,
-    domain || canonical_identifier
-)
-```
-
-The raw identifier is not written to Fabric.
-
-HMAC is intentionally described as an **MVP privacy mechanism**, not a production-perfect solution. Equality may still be observable within an epoch, and compromise of shared key material can enable enumeration.
-
-Stronger production directions include:
-
-- VOPRF / OPRF
-- Private Set Intersection (PSI)
-- HSM/KMS-backed key custody
-- stronger compartmentalization and rotation
-
----
-
-## On-chain / off-chain boundary
-
-| Common Hyperledger Fabric ledger   | Kept off-chain                  |
-| ---------------------------------- | ------------------------------- |
-| Opaque case reference              | Raw identifier                  |
-| Purpose code                       | HMAC token and matching key     |
-| Requester/provider organizations   | Provider record                 |
-| MATCH / NO_MATCH result            | Justification text              |
-| Requested disclosure scope         | Disclosure payload              |
-| Approved disclosure scope          | AES encryption key              |
-| APPROVE / PARTIAL / DENY decision  | Ed25519 private key             |
-| Payload hash / signature reference | Passwords and JWTs              |
-| Ledger timestamp                   | Sensitive database content      |
-| Fabric transaction ID              | Other provider-only information |
-
-The design intentionally keeps intelligence records out of the common blockchain.
-
----
-
-## Fabric workflow objects
-
-DefChain represents the governed workflow through five immutable business objects.
-
-### `QueryRequest`
-
-Created by the requester after case, purpose, role, organization, and query-budget validation.
-
-### `MatchAttestation`
-
-Created by each targeted provider using its provider organization identity.
-
-### `AccessRequest`
-
-Created only after a valid `MATCH`. Contains the requested disclosure scopes, not the provider record.
-
-### `AuthorizationDecision`
-
-Written by the provider. Supports:
-
-```text
-APPROVE
-PARTIAL
-DENY
-```
-
-### `DisclosureReceipt`
-
-Records cryptographic evidence that an approved disclosure occurred without placing the disclosure payload itself on the common ledger.
-
----
-
-## Security controls
-
-The prototype demonstrates:
-
-- X.509 / MSP organization identity
-- role-aware authorization
-- active-case binding
-- purpose limitation
-- per-user query budgets
-- HMAC-SHA-256 protected matching
-- replay protection
-- provider-controlled disclosure scope
-- AES-256-GCM authenticated encryption
-- SHA-256 payload hashes
-- Ed25519 signatures
-- Fabric transaction receipts
-- immutable audit history
-- revoked-user enforcement
-- fail-closed Fabric behavior
-- privacy leakage scanning of decoded blocks
-
----
+See [docs/SECURITY_CONTROLS.md](docs/SECURITY_CONTROLS.md), [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md), and [docs/GOVERNANCE.md](docs/GOVERNANCE.md) for the security and institutional boundaries.
 
 ## Why Hyperledger Fabric?
 
-Private matching itself does not require blockchain.
+Private matching alone does not require blockchain. DefChain uses Fabric where multiple organizations need jointly governed workflow state without assigning unilateral control of the audit history to one central database operator.
 
-DefChain uses blockchain only where multiple organizations need a **jointly governed state and audit history** without transferring control to one central administrator.
+Fabric contributes:
 
-Hyperledger Fabric provides:
+- permissioned organizational membership;
+- MSP-backed transaction identity;
+- deterministic chaincode validation;
+- endorsement and commit confirmation;
+- replicated workflow history;
+- controlled consortium participation.
 
-- permissioned organizational membership
-- X.509/MSP identities
-- peers representing independent organizations
-- chaincode-enforced workflow rules
-- endorsement
-- replicated transaction history
-- deterministic transaction validation
-- consortium governance
-- controlled network participation
+DefChain has no cryptocurrency, mining, Proof of Work, public intelligence ledger, or token speculation.
 
-There is:
-
-- no cryptocurrency
-- no mining
-- no Proof of Work
-- no token speculation
-- no public intelligence ledger
-
----
-
-## Topology and commands
-
-### Lite topology
-
-- PoliceMSP peer
-- RABMSP peer
-- one etcdraft/Raft orderer
-
-### Full competition topology
-
-- PoliceMSP peer
-- RABMSP peer
-- BGBMSP peer
-- CustomsMSP peer
-- three etcdraft/Raft orderers
-
-### Common configuration
+## Repository structure
 
 ```text
-Channel:   defchain-channel
-Chaincode: defchain
+apps/web                 React/Vite role-aware interface
+services/gateway-api     Auth, policy, routing, Fabric Gateway, audit API
+services/agency-adapter  Provider matching, decisions, encryption, signing
+packages/fabric-client   Organization-aware Fabric client
+packages/shared          Schemas, DTOs, privacy and cryptographic helpers
+blockchain/chaincode      Five-record TypeScript smart contract
+blockchain/network        Lite/full Fabric topology and lifecycle assets
+data/seeds                Clearly synthetic deterministic fixtures
+scripts                   Bootstrap, reset, verification and demo tooling
+tests                     Security, integration and browser verification
+assets/screenshots        Final full-mode demonstration evidence
+docs                      Architecture, API, governance and judge material
 ```
 
----
+## Verification
 
-## Development and verification
+### Standard checks
 
 ```bash
+npm run typecheck
+npm run lint
+npm run format:check
 npm run build
 npm test
 npm run test:security
 ```
 
-Real Fabric integration:
+### Real Fabric checks
 
 ```bash
 RUN_REAL_FABRIC_TESTS=true npm run test:integration
-```
-
-Production/full-mode verification:
-
-```bash
 FABRIC_NETWORK_MODE=full npm run verify:production
-```
-
-Additional verification:
-
-```bash
-npm run verify
+npm run verify:persistence
 npm run benchmark
 ```
 
-See [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) for results that were actually observed during the final prototype validation.
+The final frontend workflow test covers RAB-only selection, newest-first Fabric History, local time display, copy feedback, history-driven access, RAB approval, Police disclosure, and History refresh.
 
-See [docs/LIMITATIONS.md](docs/LIMITATIONS.md) for residual risks and production gaps.
+## Verified project status
+
+The software prototype is implemented and has been exercised against real Fabric.
+
+| Evidence                                    | Observed result                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------- |
+| Workspace type checks, lint, and formatting | Passed                                                                |
+| Production workspace build                  | Passed                                                                |
+| Focused current frontend tests              | 8 passed                                                              |
+| Real-Fabric integration suite               | Five-record lifecycle and negative invariants passed                  |
+| Focused final browser workflow              | Passed against the full production-routed stack                       |
+| Full topology                               | Four peers, three Raft orderers, four MSP approvals                   |
+| Production routing                          | SPA fallback and `/api` separation passed                             |
+| Ledger persistence                          | Query and transaction evidence survived a full container restart      |
+| Privacy scan                                | Latest recorded full scan passed across 85 decoded blocks             |
+| Correctness-oriented benchmark              | 55.863 ms average, 54.067 ms p50, 60.873 ms p95 across 10 evaluations |
+
+The benchmark is a single-client evaluation sample on one WSL2 development machine. It is not a throughput, scalability, or production-capacity claim.
+
+For the exact commands and evidence boundary, see [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) and [PROGRESS.md](PROGRESS.md).
+
+## Limitations
+
+DefChain does not claim:
+
+- access to real Police, RAB, BGB, or Customs systems;
+- government deployment, approval, or partnership;
+- production-grade key custody or identity lifecycle management;
+- perfect privacy or implementation of PSI/VOPRF;
+- Byzantine fault tolerance;
+- proof that provider intelligence is correct;
+- automatic determination of guilt or entitlement;
+- production scalability;
+- legal authorization for real inter-agency deployment.
+
+A real deployment would require legal agreements, privacy-impact assessment, formal consortium governance, hardened PKI and HSM/KMS key custody, independent security review, operational resilience testing, and institutional approval.
+
+See [docs/LIMITATIONS.md](docs/LIMITATIONS.md) and [docs/FUTURE_WORK.md](docs/FUTURE_WORK.md).
+
+## Documentation
+
+| Document                                             | Purpose                                                        |
+| ---------------------------------------------------- | -------------------------------------------------------------- |
+| [Quick start](docs/QUICKSTART.md)                    | Setup, modes, accounts, reset, and troubleshooting entry point |
+| [Architecture](docs/ARCHITECTURE.md)                 | Components, transaction path, topology, and custody boundaries |
+| [API](docs/API.md)                                   | Existing HTTP contracts and error behavior                     |
+| [Data model](docs/DATA_MODEL.md)                     | Frozen Fabric record schemas and identifier semantics          |
+| [Security controls](docs/SECURITY_CONTROLS.md)       | Implemented safeguards and verification mapping                |
+| [Threat model](docs/THREAT_MODEL.md)                 | Assets, adversaries, controls, and residual risks              |
+| [Governance](docs/GOVERNANCE.md)                     | Consortium responsibilities and operational model              |
+| [Demo script](docs/DEMO_SCRIPT.md)                   | Presenter-ready workflow                                       |
+| [Judge Q&A](docs/JUDGE_QA.md)                        | Concise technical and governance answers                       |
+| [Test results](docs/TEST_RESULTS.md)                 | Commands and results actually observed                         |
+| [Submission checklist](docs/SUBMISSION_CHECKLIST.md) | Remaining human-owned packaging and deadline checks            |
 
 ---
 
-## Important limitations
+<div align="center">
 
-DefChain is a competition prototype and does **not** claim:
-
-- government deployment or partnership
-- access to actual Police/RAB/BGB/Customs databases
-- production-grade cryptographic key custody
-- perfect privacy
-- Private Set Intersection already implemented
-- VOPRF already implemented
-- zero-knowledge proofs
-- Byzantine fault tolerance
-- correctness of source intelligence
-- automatic determination of guilt
-- legal authorization for real inter-agency deployment
-- production scalability
-
-A real deployment would require legal agreements, privacy-impact assessment, institutional governance, hardened PKI/key custody, independent security review, operational testing, and formal stakeholder approval.
-
----
-
-## Project principle
-
-> ### Share the match, not the database.
+### Share the match, not the database.
 
 **Sovereign data custody. Provider-controlled disclosure. Shared authorization. Verifiable accountability.**
+
+</div>

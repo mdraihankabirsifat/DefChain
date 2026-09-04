@@ -15,6 +15,7 @@ Last updated: 2026-09-04 (Asia/Dhaka)
 - Chaincode sequence 2 is committed with approvals from PoliceMSP, RABMSP, BGBMSP, and CustomsMSP; the lifecycle upgrade preserved existing ledger history.
 - After a Docker Desktop restart stopped all containers, the existing full Fabric, chaincode, and production app stacks were restarted without resetting volumes. Direct checks returned HTTP 200 for the API and frontend, reported `blockchain.available: true` in full mode, and confirmed production SPA/API routing behavior.
 - The frontend now submits the exact controlled Discovery provider selection, presents newest-first Fabric query history with local timestamps in a dedicated Disclosure History tab, routes history rows according to workflow state, and uses one global success/error clipboard toast for application and ledger IDs.
+- The root README has been redesigned as the final evaluator-facing project page: current capabilities and History workflow first, architecture and privacy boundaries clarified, verified evidence separated from limitations, local navigation checked, and inline demo passwords removed in favor of the existing judge handoff.
 
 ## Completed milestones
 
@@ -32,6 +33,7 @@ Last updated: 2026-09-04 (Asia/Dhaka)
 - [x] Implement the last minimal-submission prompt: selectable provider PARTIAL scopes, corrected API documentation, eight inspected screenshots, submission checklist, and demo credential handoff.
 - [x] Fix and verify Discovery-to-Disclosure navigation: `TEST-NID-0001` produces a RAB MATCH whose Request access action opens Disclosure with the application Query ID and RAB organization prefilled.
 - [x] Verify the focused frontend-improvements workflow against real full-mode Fabric: RAB-only query, newest-first timed History entry, copied toast, history-driven access request, RAB approval, Police disclosure, and refreshed History.
+- [x] Redesign and verify the final-project README against the completed implementation and recorded evidence boundary.
 
 ## Exact commands last run
 
@@ -82,6 +84,7 @@ wsl.exe -d Ubuntu -- bash -lc 'export PATH=/home/raihan_kabir/.nvm/versions/node
 wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/Documents/Projects/DefChain && FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full build web && FABRIC_NETWORK_MODE=full docker compose -f docker-compose.app.yml --profile full up -d --no-deps --force-recreate web'
 wsl.exe -d Ubuntu -- bash -lc 'cd /mnt/d/Documents/Projects/DefChain && docker run --rm --add-host host.docker.internal:host-gateway -e PLAYWRIGHT_BASE_URL=http://host.docker.internal:5173 -e EXPECTED_DEMO_MODE=full -v /mnt/d/Documents/Projects/DefChain:/work -w /work mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test tests/e2e/frontend-improvements.spec.ts'
 wsl.exe -d Ubuntu -- bash -lc 'export PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd /mnt/d/Documents/Projects/DefChain && npm run lint && npm run format:check'
+wsl.exe -d Ubuntu -- bash -lc 'export PATH=/home/raihan_kabir/.nvm/versions/node/v22.23.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd /mnt/d/Documents/Projects/DefChain && npx prettier --write Readme.md && npx prettier --check Readme.md'
 Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/api/v1/config' -TimeoutSec 15
 Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/nonexistent-spa-route' -TimeoutSec 15
 Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:5173/api/v1/does-not-exist' -TimeoutSec 15
