@@ -101,6 +101,10 @@ test(`completes the real ${mode} workflow through the UI`, async ({ page }) => {
   await page.getByRole("button", { name: /Switch actor/ }).click();
   await page.getByRole("button", { name: /Police investigator/ }).click();
   await page.getByRole("button", { name: "Disclosure" }).click();
+  await expect(page.getByTestId("query-history")).toContainText(queryId!);
+  await expect(page.locator('input[name="queryId"]')).toHaveValue(queryId!, {
+    timeout: 30_000,
+  });
   await page
     .getByRole("button", { name: "Receive approved disclosure" })
     .click();
@@ -146,4 +150,74 @@ test(`completes the real ${mode} workflow through the UI`, async ({ page }) => {
     path: `${screenshotDirectory}/08-abuse-control-or-fail-closed.png`,
     fullPage: true,
   });
+});
+
+test("each full-mode provider can request from and receive for another provider", async ({
+  page,
+}) => {
+  test.skip(mode !== "full", "Cross-provider exchange requires full mode.");
+  const exchanges = [
+    {
+      requester: /RAB provider officer/,
+      caseId: "TEST-CASE-RAB-0001",
+      identifier: "TEST-NID-0003",
+      recipient: "BGB",
+      receiver: /BGB provider officer/,
+    },
+    {
+      requester: /BGB provider officer/,
+      caseId: "TEST-CASE-BGB-0001",
+      identifier: "TEST-NID-0004",
+      recipient: "Customs",
+      receiver: /Customs provider officer/,
+    },
+    {
+      requester: /Customs provider officer/,
+      caseId: "TEST-CASE-CUSTOMS-0001",
+      identifier: "TEST-NID-0001",
+      recipient: "RAB",
+      receiver: /RAB provider officer/,
+    },
+  ];
+
+  await page.goto("/");
+  for (const exchange of exchanges) {
+    await page.getByRole("button", { name: exchange.requester }).click();
+    await expect(page.getByRole("button", { name: "Discovery" })).toBeVisible();
+    await page.getByRole("button", { name: "Discovery" }).click();
+    await page.locator('select[name="caseId"]').selectOption(exchange.caseId);
+    await page.locator('input[name="identifier"]').fill(exchange.identifier);
+    await page.getByRole("button", { name: /Create protected query/ }).click();
+    await expect(
+      page.getByRole("button", {
+        name: `Request access from ${exchange.recipient}`,
+      }),
+    ).toBeVisible({ timeout: 60_000 });
+    await page
+      .getByRole("button", {
+        name: `Request access from ${exchange.recipient}`,
+      })
+      .click();
+    await expect(page.locator('input[name="providerOrg"]')).toHaveValue(
+      `${exchange.recipient}MSP`,
+    );
+    await page.getByRole("button", { name: /Commit AccessRequest/ }).click();
+    await expect(page.getByTestId("access-proof")).toBeVisible({
+      timeout: 60_000,
+    });
+    const requestId = await page.evaluate(() =>
+      localStorage.getItem("defchain_request_id"),
+    );
+    expect(requestId).toMatch(/^request_[a-f0-9]{32}$/);
+
+    await page.getByRole("button", { name: /Switch actor/ }).click();
+    await page.getByRole("button", { name: exchange.receiver }).click();
+    await page.getByRole("button", { name: "Provider inbox" }).click();
+    await expect(
+      page
+        .locator("article.request")
+        .filter({ hasText: requestId!.slice(0, 10) }),
+    ).toBeVisible({ timeout: 60_000 });
+    await page.getByRole("button", { name: /Switch actor/ }).click();
+  }
 });

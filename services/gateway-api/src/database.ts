@@ -144,6 +144,18 @@ export class GatewayDatabase {
       "ACTIVE_INVESTIGATION",
       "case_opaque_cfe24f0a0b493f70",
     );
+    for (const [caseId, ownerOrg, opaqueRef] of [
+      ["TEST-CASE-RAB-0001", "RABMSP", "case_opaque_rab_demo_0001"],
+      ["TEST-CASE-BGB-0001", "BGBMSP", "case_opaque_bgb_demo_0001"],
+      ["TEST-CASE-CUSTOMS-0001", "CustomsMSP", "case_opaque_customs_demo_0001"],
+    ] as const)
+      insertCase.run(
+        caseId,
+        ownerOrg,
+        "ACTIVE",
+        "ACTIVE_INVESTIGATION",
+        opaqueRef,
+      );
   }
 
   userByUsername(username: string): AppUser | undefined {

@@ -36,6 +36,7 @@ type LedgerRecord = Record<string, unknown> & {
   result?: string;
   decision?: string;
   requestedScopes?: string[];
+  targetOrganizations?: string[];
 };
 type DemoConfig = {
   mode: "lite" | "full";
@@ -147,6 +148,10 @@ export function App() {
   }
   function logout() {
     localStorage.removeItem("defchain_token");
+    localStorage.removeItem("defchain_query_id");
+    localStorage.removeItem("defchain_provider_org");
+    localStorage.removeItem("defchain_request_id");
+    setAccessDraft(undefined);
     setUser(null);
     setView("dashboard");
   }
@@ -155,7 +160,7 @@ export function App() {
 
   const nav = [
     { id: "dashboard", label: "Overview", icon: Activity },
-    ...(user.role === "INVESTIGATOR"
+    ...(user.role !== "AUDITOR"
       ? [
           { id: "discovery", label: "Discovery", icon: Search },
           { id: "disclosure", label: "Disclosure", icon: FileLock2 },
@@ -207,6 +212,7 @@ export function App() {
         {view === "discovery" && (
           <Discovery
             config={config}
+            requesterOrg={user.organization}
             onRequestAccess={(draft) => {
               setAccessDraft(draft);
               localStorage.setItem("defchain_query_id", draft.queryId);
@@ -451,11 +457,16 @@ function Metric({
 
 function Discovery({
   config,
+  requesterOrg,
   onRequestAccess,
 }: {
   config: DemoConfig;
+  requesterOrg: string;
   onRequestAccess: (draft: AccessDraft) => void;
 }) {
+  const targetProviders = config.providers.filter(
+    (provider) => provider !== requesterOrg,
+  );
   const [cases, setCases] = useState<Array<{ case_id: string }>>([]);
   const [result, setResult] = useState<{
     query: LedgerRecord;
@@ -497,7 +508,7 @@ function Discovery({
           caseId: form.get("caseId"),
           purposeCode: "ACTIVE_INVESTIGATION",
           syntheticIdentifier: form.get("identifier"),
-          targetOrganizations: config.providers,
+          targetOrganizations: targetProviders,
         }),
       });
       setResult(response);
@@ -544,14 +555,17 @@ function Discovery({
           </label>
           <fieldset>
             <legend>Target organizations</legend>
-            {config.providers.map((provider) => (
+            {targetProviders.map((provider) => (
               <label className="check" key={provider}>
                 <input type="checkbox" checked readOnly />
                 {provider.replace("MSP", "")}
               </label>
             ))}
           </fieldset>
-          <button className="primary" disabled={busy}>
+          <button
+            className="primary"
+            disabled={busy || !targetProviders.length}
+          >
             {busy ? "Committing to Fabric…" : "Create protected query"}
             <ArrowRight />
           </button>
@@ -635,30 +649,72 @@ function Discovery({
 
 function Disclosure({ accessDraft }: { accessDraft?: AccessDraft }) {
   const [mode, setMode] = useState<"request" | "receive">("request");
+  const [queryId, setQueryId] = useState(
+    accessDraft?.queryId ?? localStorage.getItem("defchain_query_id") ?? "",
+  );
+  const [providerOrg, setProviderOrg] = useState(
+    accessDraft?.providerOrg ??
+      localStorage.getItem("defchain_provider_org") ??
+      "",
+  );
+  const [queryHistory, setQueryHistory] = useState<LedgerRecord[]>([]);
+  const [historyError, setHistoryError] = useState("");
   const [output, setOutput] = useState<Record<string, unknown>>();
   const [error, setError] = useState("");
   const access = output?.access as LedgerRecord | undefined;
   const receipt = output?.receipt as LedgerRecord | undefined;
   const verified =
     output?.encryptionVerified === true && output?.signatureVerified === true;
+
+  useEffect(() => {
+    request<{ queries: LedgerRecord[] }>("/queries")
+      .then((response) => {
+        setQueryHistory(response.queries);
+        setQueryId((current) => {
+          const selected = current
+            ? current
+            : String(response.queries[0]?.queryId ?? "");
+          if (selected) localStorage.setItem("defchain_query_id", selected);
+          return selected;
+        });
+      })
+      .catch((cause) =>
+        setHistoryError(
+          cause instanceof Error ? cause.message : "Query history unavailable",
+        ),
+      );
+  }, []);
+
+  useEffect(() => {
+    if (!accessDraft) return;
+    setQueryId(accessDraft.queryId);
+    setProviderOrg(accessDraft.providerOrg);
+  }, [accessDraft]);
+
+  function useHistoricalQuery(id: string) {
+    setQueryId(id);
+    localStorage.setItem("defchain_query_id", id);
+    setError("");
+  }
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setOutput(undefined);
+    const validationMessage = queryIdValidationMessage(queryId);
+    if (validationMessage) {
+      setError(validationMessage);
+      return;
+    }
+    localStorage.setItem("defchain_query_id", queryId);
     const f = new FormData(e.currentTarget);
     try {
       if (mode === "request") {
-        const queryId = String(f.get("queryId") ?? "").trim();
-        const validationMessage = queryIdValidationMessage(queryId);
-        if (validationMessage) {
-          setError(validationMessage);
-          return;
-        }
-
         const r = await request<{ access: LedgerRecord }>("/access-requests", {
           method: "POST",
           body: JSON.stringify({
             queryId,
-            providerOrg: f.get("providerOrg"),
+            providerOrg,
             requestedScopes: f.getAll("scope"),
             justification: f.get("justification"),
           }),
@@ -667,46 +723,77 @@ function Disclosure({ accessDraft }: { accessDraft?: AccessDraft }) {
         setOutput(r as unknown as Record<string, unknown>);
       } else {
         setOutput(
-          await request(`/access-requests/${f.get("requestId")}/disclose`, {
+          await request(`/queries/${encodeURIComponent(queryId)}/disclose`, {
             method: "POST",
           }),
         );
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Operation failed");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Operation failed");
     }
   }
+
   return (
     <section className="card wide">
       <div className="tabs">
         <button
+          type="button"
           className={mode === "request" ? "active" : ""}
           onClick={() => setMode("request")}
         >
           Request scoped access
         </button>
         <button
+          type="button"
           className={mode === "receive" ? "active" : ""}
           onClick={() => setMode("receive")}
         >
           Receive approved disclosure
         </button>
       </div>
+
+      <section className="query-history" data-testid="query-history">
+        <div>
+          <strong>Previous Query IDs</strong>
+          <small>Loaded from your organization's Fabric query history.</small>
+        </div>
+        {historyError && <p className="error">{historyError}</p>}
+        <div className="query-history-list">
+          {queryHistory.map((query) => (
+            <button
+              type="button"
+              className={query.queryId === queryId ? "selected" : ""}
+              aria-label={`Use query ${query.queryId}`}
+              key={query.queryId}
+              onClick={() => useHistoricalQuery(String(query.queryId))}
+            >
+              <code>{query.queryId}</code>
+              <span>
+                {(query.targetOrganizations ?? []).join(" / ")} /{" "}
+                {query.ledgerTimestamp}
+              </span>
+            </button>
+          ))}
+          {!queryHistory.length && !historyError && (
+            <small>No previous Query IDs for this organization.</small>
+          )}
+        </div>
+      </section>
+
       <form onSubmit={submit}>
         <label>
-          {mode === "request" ? "Query ID" : "Request ID"}
+          Query ID
           <input
-            key={mode}
-            name={mode === "request" ? "queryId" : "requestId"}
-            defaultValue={
-              mode === "request"
-                ? (accessDraft?.queryId ??
-                  localStorage.getItem("defchain_query_id") ??
-                  "")
-                : (localStorage.getItem("defchain_request_id") ?? "")
-            }
+            name="queryId"
+            value={queryId}
+            onChange={(event) => setQueryId(event.target.value)}
+            placeholder="query_..."
             required
           />
+          <small>
+            Use the application Query ID, not a Fabric transaction or request
+            ID.
+          </small>
         </label>
         {mode === "request" && (
           <>
@@ -714,11 +801,8 @@ function Disclosure({ accessDraft }: { accessDraft?: AccessDraft }) {
               Matching provider organization
               <input
                 name="providerOrg"
-                defaultValue={
-                  accessDraft?.providerOrg ??
-                  localStorage.getItem("defchain_provider_org") ??
-                  ""
-                }
+                value={providerOrg}
+                onChange={(event) => setProviderOrg(event.target.value)}
                 readOnly
                 required
               />
@@ -730,15 +814,15 @@ function Disclosure({ accessDraft }: { accessDraft?: AccessDraft }) {
                 "CASE_REFERENCE",
                 "CONTACT_CHANNEL",
                 "ELIGIBILITY_CATEGORY",
-              ].map((s, i) => (
-                <label className="check" key={s}>
+              ].map((scope, index) => (
+                <label className="check" key={scope}>
                   <input
                     name="scope"
-                    value={s}
+                    value={scope}
                     type="checkbox"
-                    defaultChecked={i < 2}
+                    defaultChecked={index < 2}
                   />
-                  {s.replaceAll("_", " ")}
+                  {scope.replaceAll("_", " ")}
                 </label>
               ))}
             </fieldset>
@@ -746,7 +830,7 @@ function Disclosure({ accessDraft }: { accessDraft?: AccessDraft }) {
               Purpose-bound justification
               <textarea
                 name="justification"
-                defaultValue="Verify synthetic cross-agency relevance for active case P-2026-014."
+                defaultValue="Verify synthetic cross-agency relevance for the active synthetic case."
                 minLength={12}
               />
             </label>
@@ -764,7 +848,7 @@ function Disclosure({ accessDraft }: { accessDraft?: AccessDraft }) {
         <div className="proof decision-proof" data-testid="access-proof">
           <span>
             <strong>AccessRequest committed</strong>
-            <small>{(access.requestedScopes ?? []).join(" · ")}</small>
+            <small>{(access.requestedScopes ?? []).join(" / ")}</small>
           </span>
           <CopyButton value={access.txId} />
         </div>

@@ -4,6 +4,7 @@ import { app, dependencies } from "./server.js";
 
 const api = supertest(app);
 let policeToken = "";
+let rabToken = "";
 const queryBody = {
   caseId: "P-2026-014",
   purposeCode: "ACTIVE_INVESTIGATION",
@@ -13,7 +14,7 @@ const queryBody = {
 const committedQuery = {
   schemaVersion: "1.0",
   recordType: "QueryRequest",
-  queryId: "query_1234567890abcdef",
+  queryId: `query_${"1".repeat(32)}`,
   requesterOrg: "PoliceMSP",
   opaqueCaseRef: "case_opaque_6a58a441e3c507c8",
   purposeCode: "ACTIVE_INVESTIGATION",
@@ -43,6 +44,11 @@ describe("gateway API controls and query outcomes", () => {
       password: "PoliceDemo!2026",
     });
     policeToken = response.body.token;
+    const rabLogin = await api.post("/api/v1/auth/login").send({
+      username: "rab.officer",
+      password: "RabDemo!2026",
+    });
+    rabToken = rabLogin.body.token;
   });
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -173,6 +179,63 @@ describe("gateway API controls and query outcomes", () => {
     expect(evaluate).not.toHaveBeenCalled();
   });
 
+  it("allows a provider officer to initiate a cross-provider query", async () => {
+    const submit = vi.spyOn(dependencies.fabric, "submit");
+    const response = await api
+      .post("/api/v1/queries")
+      .set("authorization", `Bearer ${rabToken}`)
+      .send({
+        caseId: "TEST-CASE-RAB-0001",
+        purposeCode: "ACTIVE_INVESTIGATION",
+        syntheticIdentifier: "TEST-NID-0003",
+        targetOrganizations: ["BGBMSP"],
+      });
+    expect(response.status).toBe(422);
+    expect(response.body.error.code).toBe("PROVIDER_UNAVAILABLE_IN_MODE");
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("returns only the caller organization's previous Query IDs", async () => {
+    vi.spyOn(dependencies.fabric, "evaluate").mockResolvedValue([
+      committedQuery,
+      {
+        ...committedQuery,
+        queryId: `query_${"2".repeat(32)}`,
+        requesterOrg: "RABMSP",
+      },
+    ] as never);
+    const response = await api
+      .get("/api/v1/queries")
+      .set("authorization", `Bearer ${policeToken}`);
+    expect(response.status).toBe(200);
+    expect(response.body.queries).toHaveLength(1);
+    expect(response.body.queries[0].queryId).toBe(committedQuery.queryId);
+  });
+
+  it("resolves disclosure state by Query ID without requiring a request ID", async () => {
+    vi.spyOn(dependencies.fabric, "evaluate").mockResolvedValue([
+      committedQuery,
+      {
+        schemaVersion: "1.0",
+        recordType: "AccessRequest",
+        requestId: `request_${"3".repeat(32)}`,
+        queryId: committedQuery.queryId,
+        requesterOrg: "PoliceMSP",
+        providerOrg: "RABMSP",
+        requestedScopes: ["IDENTITY_CONFIRMATION"],
+        purposeCode: "ACTIVE_INVESTIGATION",
+        justificationHash: "c".repeat(64),
+        status: "PENDING",
+        txId: "d".repeat(64),
+        ledgerTimestamp: "2026-09-02T00:00:02.000Z",
+      },
+    ] as never);
+    const response = await api
+      .post(`/api/v1/queries/${committedQuery.queryId}/disclose`)
+      .set("authorization", `Bearer ${policeToken}`);
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe("AUTHORIZATION_PENDING");
+  });
   it("reports Fabric health honestly without a fake ledger", async () => {
     vi.spyOn(dependencies.fabric, "health").mockResolvedValue({
       available: false,

@@ -128,6 +128,8 @@ Police performs a case-bound protected query. In the synthetic demonstration, **
 ### 4. Scoped access request
 
 A match does not automatically expose the provider record. The requester asks only for explicitly required disclosure scopes.
+The MATCH-only **Request access** action carries the application `query_...` ID and matching provider into the Disclosure form automatically.
+The Disclosure page keeps a Fabric-backed **Previous Query IDs** list and resolves approved disclosures by Query ID, so request IDs never need to be copied manually.
 
 ![Scoped access request](assets/screenshots/04-scoped-access-request.png)
 
@@ -253,6 +255,16 @@ Current implementation status and blockers are documented in [PROGRESS.md](PROGR
 | Revoked test user     | `revoked.user`        | `RevokedDemo!2026` | Disabled                 |
 | Exhausted-budget user | `budget.exhausted`    | `BudgetDemo!2026`  | Zero query budget        |
 
+RAB, BGB, and Customs officers have both requester and provider capabilities: each can create a query against either of the other provider organizations and each receives incoming AccessRequests in its own provider inbox. Their synthetic requester cases are:
+
+| Requester organization | Active synthetic case    |
+| ---------------------- | ------------------------ |
+| RABMSP                 | `TEST-CASE-RAB-0001`     |
+| BGBMSP                 | `TEST-CASE-BGB-0001`     |
+| CustomsMSP             | `TEST-CASE-CUSTOMS-0001` |
+
+An organization cannot target itself. Query history is read from Fabric and is filtered to the authenticated requester organization.
+
 > These credentials are local demonstration fixtures and are not production credentials.
 
 ---
@@ -330,7 +342,9 @@ A partial authorization can demonstrate that provider control applies at the fie
 
 ### 4. Verified disclosure
 
-Return to Police and receive only the authorized fields.
+Return to Police, open Disclosure, and select the original `query_...` value from **Previous Query IDs**. The page uses that Query ID to locate the approved request and receive only the authorized fields.
+
+A 64-character Fabric transaction ID is evidence for a ledger commit, but it is not accepted as an application Query ID.
 
 The disclosure workflow uses:
 

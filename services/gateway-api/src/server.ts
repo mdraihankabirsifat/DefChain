@@ -30,6 +30,8 @@ import {
   verifyReceipt,
   validateDecisionScopes,
   type AccessRequest,
+  type AuthorizationDecision,
+  type QueryRequest,
   type DisclosureReceipt,
   type LedgerRecord,
   type SecurityEvent,
@@ -100,6 +102,52 @@ function providerFailure(providerOrg: string) {
     },
   };
 }
+async function completeDisclosure(access: AccessRequest) {
+  const result = await callAdapter<{
+    encrypted: Parameters<typeof decryptPayload>[0];
+    payloadHash: string;
+    signature: string;
+    receipt: DisclosureReceipt;
+  }>(access.providerOrg, "/internal/disclosures", {
+    requestId: access.requestId,
+  });
+  const payload = decryptPayload(
+    result.encrypted,
+    process.env.DISCLOSURE_KEY ??
+      "defchain-controlled-demo-disclosure-key-change-me",
+  );
+  if (sha256(JSON.stringify(payload)) !== result.payloadHash)
+    throw new DefChainError(
+      "PAYLOAD_HASH_MISMATCH",
+      "Disclosure integrity check failed",
+      502,
+    );
+  const publicKeyPath = path.join(
+    root,
+    "config",
+    "runtime",
+    `${access.providerOrg.replace("MSP", "").toLowerCase()}-ed25519-public.pem`,
+  );
+  const signatureVerified = verifyReceipt(
+    result.payloadHash,
+    result.signature,
+    await fs.readFile(publicKeyPath, "utf8"),
+  );
+  if (!signatureVerified)
+    throw new DefChainError(
+      "SIGNATURE_INVALID",
+      "Provider signature check failed",
+      502,
+    );
+  return {
+    approvedPayload: payload,
+    encryptionVerified: true,
+    signatureVerified,
+    payloadHash: result.payloadHash,
+    receipt: result.receipt,
+  };
+}
+
 function requireAuth(
   req: AuthRequest,
   _res: Response,
@@ -228,11 +276,31 @@ app.get("/api/v1/config", (_req, res) =>
 app.get("/api/v1/cases", requireAuth, (req: AuthRequest, res) =>
   res.json({ cases: database.activeCases(req.user!.organization) }),
 );
+app.get(
+  "/api/v1/queries",
+  requireAuth,
+  role("INVESTIGATOR", "PROVIDER_OFFICER"),
+  async (req: AuthRequest, res, next) => {
+    try {
+      const queries = await fabric.evaluate<QueryRequest[]>(
+        req.user!.organization,
+        "ListWorkflows",
+      );
+      res.json({
+        queries: queries
+          .filter((query) => query.requesterOrg === req.user!.organization)
+          .sort((a, b) => b.ledgerTimestamp.localeCompare(a.ledgerTimestamp)),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 app.post(
   "/api/v1/queries",
   requireAuth,
-  role("INVESTIGATOR"),
+  role("INVESTIGATOR", "PROVIDER_OFFICER"),
   async (req: AuthRequest, res, next) => {
     try {
       const input = apiQuerySchema.parse(req.body);
@@ -288,7 +356,10 @@ app.post(
           purposeCode: input.purposeCode,
           targetOrganizations: input.targetOrganizations,
           policyVersion: "demo-1",
-          createdByRole: "INVESTIGATOR",
+          createdByRole:
+            appUser.role === "PROVIDER_OFFICER"
+              ? "PROVIDER_OFFICER"
+              : "INVESTIGATOR",
         }),
       );
       database.incrementQueryCount(appUser.id);
@@ -338,7 +409,7 @@ app.post(
 app.post(
   "/api/v1/queries/:queryId/attestations/retry",
   requireAuth,
-  role("INVESTIGATOR"),
+  role("INVESTIGATOR", "PROVIDER_OFFICER"),
   async (req: AuthRequest, res, next) => {
     try {
       const syntheticIdentifier = String(req.body?.syntheticIdentifier ?? "");
@@ -441,7 +512,7 @@ app.get(
 app.post(
   "/api/v1/access-requests",
   requireAuth,
-  role("INVESTIGATOR"),
+  role("INVESTIGATOR", "PROVIDER_OFFICER"),
   async (req: AuthRequest, res, next) => {
     try {
       const suppliedQueryId = String(req.body?.queryId ?? "").trim();
@@ -609,9 +680,86 @@ app.post(
 );
 
 app.post(
+  "/api/v1/queries/:queryId/disclose",
+  requireAuth,
+  role("INVESTIGATOR", "PROVIDER_OFFICER"),
+  async (req: AuthRequest, res, next) => {
+    try {
+      const queryId = String(req.params.queryId ?? "").trim();
+      if (/^[a-f0-9]{64}$/i.test(queryId))
+        throw new DefChainError(
+          "INVALID_QUERY_ID",
+          "Use the application Query ID beginning with query_, not the 64-character Fabric transaction ID.",
+          400,
+        );
+      if (!/^query_[a-f0-9]{32}$/.test(queryId))
+        throw new DefChainError(
+          "INVALID_QUERY_ID",
+          "Query ID must begin with query_ and contain the application query identifier.",
+          400,
+        );
+      const workflow = await fabric.evaluate<LedgerRecord[]>(
+        req.user!.organization,
+        "GetWorkflow",
+        queryId,
+      );
+      const query = workflow.find(
+        (record): record is QueryRequest =>
+          record.recordType === "QueryRequest",
+      );
+      if (!query || query.requesterOrg !== req.user!.organization)
+        throw new DefChainError("QUERY_NOT_FOUND", "Query not found", 404);
+      const decisions = new Map(
+        workflow
+          .filter(
+            (record): record is AuthorizationDecision =>
+              record.recordType === "AuthorizationDecision",
+          )
+          .map((decision) => [decision.requestId, decision]),
+      );
+      const disclosed = new Set(
+        workflow
+          .filter((record) => record.recordType === "DisclosureReceipt")
+          .map((receipt) => receipt.requestId),
+      );
+      const accessRequests = workflow.filter(
+        (record): record is AccessRequest =>
+          record.recordType === "AccessRequest" &&
+          record.requesterOrg === req.user!.organization,
+      );
+      const access = accessRequests
+        .filter((request) => {
+          const decision = decisions.get(request.requestId);
+          return (
+            decision &&
+            decision.decision !== "DENY" &&
+            new Date(decision.expiresAt).getTime() > Date.now() &&
+            !disclosed.has(request.requestId)
+          );
+        })
+        .sort((a, b) => b.ledgerTimestamp.localeCompare(a.ledgerTimestamp))[0];
+      if (!access) {
+        const pending = accessRequests.some(
+          (request) => !decisions.has(request.requestId),
+        );
+        throw new DefChainError(
+          pending ? "AUTHORIZATION_PENDING" : "NO_APPROVED_ACCESS_REQUEST",
+          pending
+            ? "Provider authorization is still pending for this Query ID."
+            : "No undisclosed approved access request exists for this Query ID.",
+          409,
+        );
+      }
+      res.json(await completeDisclosure(access));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.post(
   "/api/v1/access-requests/:requestId/disclose",
   requireAuth,
-  role("INVESTIGATOR"),
+  role("INVESTIGATOR", "PROVIDER_OFFICER"),
   async (req: AuthRequest, res, next) => {
     try {
       const access = await fabric.evaluate<AccessRequest>(
@@ -625,49 +773,7 @@ app.post(
           "Requester organization mismatch",
           403,
         );
-      const result = await callAdapter<{
-        encrypted: Parameters<typeof decryptPayload>[0];
-        payloadHash: string;
-        signature: string;
-        receipt: DisclosureReceipt;
-      }>(access.providerOrg, "/internal/disclosures", {
-        requestId: req.params.requestId,
-      });
-      const payload = decryptPayload(
-        result.encrypted,
-        process.env.DISCLOSURE_KEY ??
-          "defchain-controlled-demo-disclosure-key-change-me",
-      );
-      if (sha256(JSON.stringify(payload)) !== result.payloadHash)
-        throw new DefChainError(
-          "PAYLOAD_HASH_MISMATCH",
-          "Disclosure integrity check failed",
-          502,
-        );
-      const publicKeyPath = path.join(
-        root,
-        "config",
-        "runtime",
-        `${access.providerOrg.replace("MSP", "").toLowerCase()}-ed25519-public.pem`,
-      );
-      const signatureVerified = verifyReceipt(
-        result.payloadHash,
-        result.signature,
-        await fs.readFile(publicKeyPath, "utf8"),
-      );
-      if (!signatureVerified)
-        throw new DefChainError(
-          "SIGNATURE_INVALID",
-          "Provider signature check failed",
-          502,
-        );
-      res.json({
-        approvedPayload: payload,
-        encryptionVerified: true,
-        signatureVerified,
-        payloadHash: result.payloadHash,
-        receipt: result.receipt,
-      });
+      res.json(await completeDisclosure(access));
     } catch (error) {
       next(error);
     }

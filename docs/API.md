@@ -2,23 +2,25 @@
 
 Base path: `/api/v1`. JSON bodies are limited to 32 KiB and validated. Authenticated routes use `Authorization: Bearer <JWT>`. Errors use `{ "error": { "code", "message", "requestId" } }`.
 
-| Method and route                            | Role             | Behavior / principal responses                                                                                     |
-| ------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `POST /auth/login`                          | public           | 200 JWT; 401 invalid; 403 revoked                                                                                  |
-| `POST /auth/logout`                         | authenticated    | 204 (client discards stateless demo JWT)                                                                           |
-| `GET /auth/me`                              | authenticated    | Safe user profile and budget                                                                                       |
-| `GET /config`                               | public           | Server-authoritative lite/full label and available provider list                                                   |
-| `GET /health`                               | public           | 200 Fabric reachable; 503 unavailable; includes mode/providers                                                     |
-| `GET /cases`                                | authenticated    | Active cases owned by user organization                                                                            |
-| `POST /queries`                             | investigator     | Commit QueryRequest, then fan out; 201 complete, 207 partial provider failure, or 503 if query commit itself fails |
-| `POST /queries/:queryId/attestations/retry` | investigator     | Retry failed provider attestations against the already committed query without creating a duplicate query          |
-| `GET /workflows/:queryId`                   | authenticated    | Query Fabric workflow timeline                                                                                     |
-| `POST /access-requests`                     | investigator     | Commit narrow AccessRequest after MATCH                                                                            |
-| `GET /provider/inbox`                       | provider officer | Access requests for provider organization                                                                          |
-| `POST /provider/requests/:id/decision`      | provider officer | Provider adapter commits APPROVE/PARTIAL/DENY                                                                      |
-| `POST /access-requests/:id/disclose`        | investigator     | Provider encrypts approved fields, signs hash, commits receipt; gateway decrypts/verifies                          |
-| `GET /security-events`                      | auditor          | Safe rejected-event view                                                                                           |
-| `POST /demo/reset`                          | auditor          | Reset local counters/events only in DEMO_MODE; full ledger reset stays an operator command                         |
+| Method and route                            | Role                          | Behavior / principal responses                                                                                     |
+| ------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `POST /auth/login`                          | public                        | 200 JWT; 401 invalid; 403 revoked                                                                                  |
+| `POST /auth/logout`                         | authenticated                 | 204 (client discards stateless demo JWT)                                                                           |
+| `GET /auth/me`                              | authenticated                 | Safe user profile and budget                                                                                       |
+| `GET /config`                               | public                        | Server-authoritative lite/full label and available provider list                                                   |
+| `GET /health`                               | public                        | 200 Fabric reachable; 503 unavailable; includes mode/providers                                                     |
+| `GET /cases`                                | authenticated                 | Active cases owned by user organization                                                                            |
+| `GET /queries`                              | requester or provider officer | Previous application Query IDs created by the caller's organization, read from Fabric                              |
+| `POST /queries`                             | requester or provider officer | Commit QueryRequest, then fan out; 201 complete, 207 partial provider failure, or 503 if query commit itself fails |
+| `POST /queries/:queryId/attestations/retry` | requester or provider officer | Retry failed provider attestations against the already committed query without creating a duplicate query          |
+| `GET /workflows/:queryId`                   | authenticated                 | Query Fabric workflow timeline                                                                                     |
+| `POST /access-requests`                     | requester or provider officer | Commit narrow AccessRequest after MATCH                                                                            |
+| `GET /provider/inbox`                       | provider officer              | Access requests for provider organization                                                                          |
+| `POST /provider/requests/:id/decision`      | provider officer              | Provider adapter commits APPROVE/PARTIAL/DENY                                                                      |
+| `POST /queries/:queryId/disclose`           | requester or provider officer | Resolve the approved request by application Query ID, obtain/verify disclosure, and commit receipt                 |
+| `POST /access-requests/:id/disclose`        | requester or provider officer | Backward-compatible request-ID disclosure endpoint                                                                 |
+| `GET /security-events`                      | auditor                       | Safe rejected-event view                                                                                           |
+| `POST /demo/reset`                          | auditor                       | Reset local counters/events only in DEMO_MODE; full ledger reset stays an operator command                         |
 
 Example query:
 

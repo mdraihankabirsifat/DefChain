@@ -147,6 +147,23 @@ describe("DefChainContract lifecycle and invariants", () => {
     ).rejects.toThrow("ERR_WRONG_MSP");
   });
 
+  it("accepts a provider organization acting as a requester", async () => {
+    const h = harness("RABMSP");
+    const record = JSON.parse(
+      await contract.CreateQueryRequest(
+        h.ctx,
+        JSON.stringify({
+          ...query,
+          queryId: "query_provider_0001",
+          requesterOrg: "RABMSP",
+          targetOrganizations: ["BGBMSP"],
+          createdByRole: "PROVIDER_OFFICER",
+        }),
+      ),
+    );
+    expect(record.createdByRole).toBe("PROVIDER_OFFICER");
+    expect(record.requesterOrg).toBe("RABMSP");
+  });
   it("rejects duplicate immutable keys", async () => {
     const h = harness();
     await contract.CreateQueryRequest(h.ctx, JSON.stringify(query));
